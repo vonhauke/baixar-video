@@ -1,0 +1,18 @@
+# Build do PyInstaller
+build/
+dist/
+*.spec
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Sistema
+Thumbs.db
+desktop.ini
+
+# Capturas de tela geradas em testes
+preview_app.png
