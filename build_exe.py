@@ -46,6 +46,7 @@ args = [
     "--icon", "icone.ico",
     "--add-data", "icone.ico;.",
     "--collect-all", "yt_dlp",
+    "--collect-all", "sv_ttk",
 ]
 
 if os.path.isfile(ffmpeg_exe):

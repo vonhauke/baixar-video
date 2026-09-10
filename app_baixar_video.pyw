@@ -8,6 +8,10 @@ em MP4 na pasta escolhida.
 
 Empacotado como .exe com PyInstaller (ver build_exe.py). O ffmpeg vai junto
 dentro do executavel, entao nao precisa de nada instalado na maquina.
+
+Visual: usa o tema sv_ttk (estilo Windows 11) quando disponivel, com um
+fallback silencioso para o tema padrao do Windows caso a biblioteca nao
+esteja instalada.
 """
 
 import os
@@ -20,8 +24,18 @@ from tkinter import ttk, filedialog, messagebox
 
 import yt_dlp
 
+try:
+    import sv_ttk
+    TEM_SV_TTK = True
+except ImportError:
+    TEM_SV_TTK = False
+
 APP_TITLE = "Baixar Video"
 DEFAULT_DIR = r"C:\Users\Pedro\Videos"
+
+COR_TEXTO_SECUNDARIO = "#6b6b6b"
+COR_SUCESSO = "#1a7f37"
+COR_ERRO = "#c4281c"
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +129,6 @@ class App(tk.Tk):
         super().__init__()
         self.title(APP_TITLE)
         self.resizable(False, False)
-        self.configure(padx=18, pady=16)
 
         try:
             self.iconbitmap(resource_path("icone.ico"))
@@ -127,46 +140,68 @@ class App(tk.Tk):
         self.msg_queue = queue.Queue()
         self.baixando = False
 
-        style = ttk.Style(self)
-        try:
-            style.theme_use("vista")
-        except tk.TclError:
-            pass
+        # ----- Tema -----
+        if TEM_SV_TTK:
+            sv_ttk.set_theme("light")
+            self.configure(bg="#fafafa")
+        else:
+            style = ttk.Style(self)
+            try:
+                style.theme_use("vista")
+            except tk.TclError:
+                pass
+
+        container = ttk.Frame(self, padding=(24, 20, 24, 20))
+        container.grid(row=0, column=0, sticky="nsew")
+        self.columnconfigure(0, weight=1)
+
+        # ----- Cabecalho -----
+        ttk.Label(
+            container, text="Baixar Video", font=("Segoe UI", 16, "bold")
+        ).grid(row=0, column=0, columnspan=3, sticky="w")
+        ttk.Label(
+            container,
+            text="Cole o link do YouTube, Instagram, Twitter/X e mais.",
+            foreground=COR_TEXTO_SECUNDARIO,
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(2, 18))
 
         # ----- Link -----
-        ttk.Label(self, text="Cole o link do video:").grid(
-            row=0, column=0, columnspan=3, sticky="w"
+        ttk.Label(container, text="Link do video").grid(
+            row=2, column=0, columnspan=3, sticky="w"
         )
-        self.entrada = ttk.Entry(self, textvariable=self.url, width=52)
-        self.entrada.grid(row=1, column=0, columnspan=2, sticky="we", pady=(2, 0))
-        ttk.Button(self, text="Colar", width=8, command=self._colar).grid(
-            row=1, column=2, sticky="e", padx=(8, 0), pady=(2, 0)
+        self.entrada = ttk.Entry(container, textvariable=self.url, width=52)
+        self.entrada.grid(row=3, column=0, columnspan=2, sticky="we", pady=(4, 0))
+        ttk.Button(container, text="Colar", width=8, command=self._colar).grid(
+            row=3, column=2, sticky="e", padx=(8, 0), pady=(4, 0)
         )
 
         # ----- Pasta de destino -----
-        ttk.Label(self, text="Salvar em:").grid(
-            row=2, column=0, columnspan=3, sticky="w", pady=(12, 0)
+        ttk.Label(container, text="Salvar em").grid(
+            row=4, column=0, columnspan=3, sticky="w", pady=(16, 0)
         )
-        self.lbl_pasta = ttk.Entry(self, textvariable=self.pasta, state="readonly")
-        self.lbl_pasta.grid(row=3, column=0, sticky="we", pady=(2, 0))
-        ttk.Button(self, text="Trocar...", width=9, command=self._trocar_pasta).grid(
-            row=3, column=1, sticky="e", padx=(8, 0), pady=(2, 0)
+        self.lbl_pasta = ttk.Entry(container, textvariable=self.pasta, state="readonly")
+        self.lbl_pasta.grid(row=5, column=0, sticky="we", pady=(4, 0))
+        ttk.Button(container, text="Trocar...", width=9, command=self._trocar_pasta).grid(
+            row=5, column=1, sticky="e", padx=(8, 0), pady=(4, 0)
         )
-        ttk.Button(self, text="Abrir pasta", width=11, command=self._abrir_pasta).grid(
-            row=3, column=2, sticky="e", padx=(8, 0), pady=(2, 0)
+        ttk.Button(container, text="Abrir pasta", width=11, command=self._abrir_pasta).grid(
+            row=5, column=2, sticky="e", padx=(8, 0), pady=(4, 0)
         )
 
         # ----- Botao principal -----
-        self.btn = ttk.Button(self, text="Baixar video", command=self._iniciar)
-        self.btn.grid(row=4, column=0, columnspan=3, sticky="we", pady=(16, 4), ipady=6)
+        estilo_botao = "Accent.TButton" if TEM_SV_TTK else "TButton"
+        self.btn = ttk.Button(
+            container, text="Baixar video", command=self._iniciar, style=estilo_botao
+        )
+        self.btn.grid(row=6, column=0, columnspan=3, sticky="we", pady=(22, 6), ipady=8)
 
         # ----- Progresso -----
-        self.barra = ttk.Progressbar(self, mode="determinate", maximum=100)
-        self.barra.grid(row=5, column=0, columnspan=3, sticky="we", pady=(6, 2))
-        self.status = ttk.Label(self, text="Pronto.", foreground="#555")
-        self.status.grid(row=6, column=0, columnspan=3, sticky="w")
+        self.barra = ttk.Progressbar(container, mode="determinate", maximum=100)
+        self.barra.grid(row=7, column=0, columnspan=3, sticky="we", pady=(6, 4))
+        self.status = ttk.Label(container, text="Pronto.", foreground=COR_TEXTO_SECUNDARIO)
+        self.status.grid(row=8, column=0, columnspan=3, sticky="w")
 
-        self.columnconfigure(0, weight=1)
+        container.columnconfigure(0, weight=1)
         self.entrada.focus_set()
         self._centralizar()
         self.after(100, self._ler_fila)
@@ -202,7 +237,7 @@ class App(tk.Tk):
         self.baixando = True
         self.btn.config(state="disabled", text="Baixando...")
         self.barra.config(value=0)
-        self.status.config(text="Iniciando...", foreground="#555")
+        self.status.config(text="Iniciando...", foreground=COR_TEXTO_SECUNDARIO)
 
         threading.Thread(
             target=baixar, args=(url, self.pasta.get(), self.msg_queue), daemon=True
@@ -216,7 +251,7 @@ class App(tk.Tk):
                 if tipo == "progresso":
                     self.barra.config(value=dado)
                 elif tipo == "status":
-                    self.status.config(text=dado, foreground="#555")
+                    self.status.config(text=dado, foreground=COR_TEXTO_SECUNDARIO)
                 elif tipo == "concluido":
                     self._fim_ok(dado)
                 elif tipo == "erro":
@@ -230,7 +265,7 @@ class App(tk.Tk):
         self.btn.config(state="normal", text="Baixar video")
         self.barra.config(value=100)
         nome = os.path.basename(caminho)
-        self.status.config(text=f"Concluido: {nome}", foreground="#1a7f37")
+        self.status.config(text=f"Concluido: {nome}", foreground=COR_SUCESSO)
         if messagebox.askyesno(
             APP_TITLE, f"Download concluido!\n\n{nome}\n\nAbrir a pasta agora?"
         ):
@@ -241,7 +276,7 @@ class App(tk.Tk):
         self.baixando = False
         self.btn.config(state="normal", text="Baixar video")
         self.barra.config(value=0)
-        self.status.config(text="Falhou.", foreground="#b3261e")
+        self.status.config(text="Falhou.", foreground=COR_ERRO)
         curta = mensagem.strip().splitlines()[-1] if mensagem.strip() else mensagem
         messagebox.showerror(
             APP_TITLE,
