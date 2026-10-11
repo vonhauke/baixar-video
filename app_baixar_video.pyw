@@ -619,6 +619,7 @@ class App(ctk.CTk):
             "inicio": [self.rotulo_link, self.campo, self.destino, self.btn],
             "encontrado": [self.rotulo_link, self.campo, self.cartao, self.destino, self.btn],
             "baixando": [self.cartao, self.progresso, self.etapas, self.destino],
+            "concluido": [self.cartao, self.progresso, self.etapas, self.destino, self.btn],
         }[estado]
         for w in ordem:
             if w is self.rotulo_link:
@@ -637,6 +638,9 @@ class App(ctk.CTk):
         if self.estado == "inicio":
             habilitado = bool(self.entrada.get().strip()) and not self.ocupado
             texto = "Buscando…" if self.ocupado else "Buscar vídeo"
+        elif self.estado == "concluido":
+            habilitado = True
+            texto = "Baixar outro vídeo"
         else:
             habilitado = not self.ocupado
             texto = "Baixar vídeo"
@@ -659,6 +663,8 @@ class App(ctk.CTk):
     def _colar(self):
         if self.ocupado or self.estado == "baixando":
             return
+        if self.estado == "concluido":
+            self._novo_download()
         try:
             texto = self.clipboard_get().strip()
         except tk.TclError:
@@ -696,6 +702,8 @@ class App(ctk.CTk):
             self._buscar()
         elif self.estado == "encontrado":
             self._baixar()
+        elif self.estado == "concluido":
+            self._novo_download()
 
     def _buscar(self):
         url = self.entrada.get().strip()
@@ -824,11 +832,12 @@ class App(ctk.CTk):
         self.barra.set(1.0)
         self.lbl_pct.configure(text="100%")
         self._pintar_etapa("pronto")
-        nome = os.path.basename(caminho)
-        if messagebox.askyesno(
-            APP_TITLE, f"Download concluido!\n\n{nome}\n\nAbrir a pasta agora?"
-        ):
-            abrir_pasta(os.path.dirname(caminho) or self.pasta)
+        self.lbl_prog_titulo.configure(text="Concluído")
+        self.lbl_vel.configure(text="")
+        self.lbl_eta.configure(text="")
+        self._mostrar("concluido")
+
+    def _novo_download(self):
         self.info = None
         self.lbl_prog_titulo.configure(text="Baixando…")
         self.entrada.delete(0, "end")

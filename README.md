@@ -18,7 +18,7 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 3. Clique em **Buscar vídeo**: aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
 4. Se quiser, troque a pasta em **Trocar** (padrão: `C:\Users\Pedro\Videos`).
 5. Clique em **Baixar vídeo** e acompanhe: Informações → Baixando → Convertendo para MP4.
-6. Ao terminar, o app pergunta se você quer abrir a pasta.
+6. Ao terminar, a tela mostra **Concluído**. Use **Abrir** para ver o arquivo ou **Baixar outro vídeo** para recomeçar.
 
 > O Windows pode mostrar um aviso do SmartScreen na primeira vez, porque o `.exe`
 > não é assinado. Clique em **Mais informações → Executar assim mesmo**.
