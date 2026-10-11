@@ -2,14 +2,14 @@
 """
 build_exe.py
 
-Gera "Baixar Video.exe" (um unico arquivo) a partir de app_baixar_video.pyw.
+Gera "SnapYou.exe" (um unico arquivo) a partir de app_baixar_video.pyw.
 O ffmpeg e o ffprobe vao embutidos, entao o .exe roda em qualquer PC Windows
 sem precisar instalar Python, yt-dlp ou ffmpeg.
 
 Uso:
     python build_exe.py
 
-Depois, copie "dist\\Baixar Video.exe" para a Area de Trabalho.
+Depois, copie "dist\\SnapYou.exe" para a Area de Trabalho.
 """
 
 import os
@@ -42,7 +42,7 @@ args = [
     "--clean",
     "--onefile",
     "--windowed",
-    "--name", "Baixar Video",
+    "--name", "SnapYou",
     "--icon", "icone.ico",
     "--add-data", "icone.ico;.",
     "--collect-all", "yt_dlp",
@@ -60,7 +60,7 @@ if os.path.isfile(ffprobe_exe):
 print("Gerando o executavel (pode levar alguns minutos)...\n")
 PyInstaller.__main__.run(args)
 
-destino = os.path.join(AQUI, "dist", "Baixar Video.exe")
+destino = os.path.join(AQUI, "dist", "SnapYou.exe")
 if os.path.isfile(destino):
     mb = os.path.getsize(destino) / (1024 * 1024)
     print(f"\nPronto: {destino}  ({mb:.0f} MB)")
@@ -68,8 +68,8 @@ if os.path.isfile(destino):
     desktop = _pasta_area_de_trabalho()
     if desktop and os.path.isdir(desktop):
         try:
-            shutil.copy2(destino, os.path.join(desktop, "Baixar Video.exe"))
-            print(f"Copiado para a Area de Trabalho: {desktop}\\Baixar Video.exe")
+            shutil.copy2(destino, os.path.join(desktop, "SnapYou.exe"))
+            print(f"Copiado para a Area de Trabalho: {desktop}\\SnapYou.exe")
         except Exception as e:
             print(f"Nao consegui copiar para a Area de Trabalho automaticamente: {e}")
 else:

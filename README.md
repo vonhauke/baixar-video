@@ -1,6 +1,6 @@
-# Baixar Vídeo
+# SnapYou
 
-Aplicativo de janela para Windows que baixa vídeos do YouTube (e de outros sites
+SnapYou é um aplicativo de janela para Windows que baixa vídeos do YouTube (e de outros sites
 suportados pelo [yt-dlp](https://github.com/yt-dlp/yt-dlp)) em **MP4**.
 Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 

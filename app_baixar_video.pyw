@@ -2,10 +2,10 @@
 """
 app_baixar_video.pyw
 
-Aplicativo de janela para baixar videos do YouTube (e outros sites suportados
-pelo yt-dlp). Cole o link, clique em "Buscar video" para ver a miniatura, o
-titulo, a duracao e a melhor qualidade, e depois em "Baixar video". O video e
-salvo em MP4 na pasta escolhida.
+SnapYou: aplicativo de janela para baixar videos do YouTube (e outros sites
+suportados pelo yt-dlp). Cole o link, clique em "Buscar video" para ver a
+miniatura, o titulo, a duracao e a melhor qualidade, e depois em "Baixar
+video". O video e salvo em MP4 na pasta escolhida.
 
 Empacotado como .exe com PyInstaller (ver build_exe.py). O ffmpeg vai junto
 dentro do executavel, entao nao precisa de nada instalado na maquina.
@@ -31,7 +31,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 import yt_dlp
 
-APP_TITLE = "Baixar Video"
+APP_TITLE = "SnapYou"
 DEFAULT_DIR = r"C:\Users\Pedro\Videos"
 
 # ---------------------------------------------------------------------------
@@ -501,7 +501,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(self.cabecalho, text="", image=self._img_app).pack(side="left", padx=(0, 12))
         textos = ctk.CTkFrame(self.cabecalho, fg_color="transparent")
         textos.pack(side="left")
-        ctk.CTkLabel(textos, text="Baixar vídeo", font=self.f_titulo, text_color=COR_TEXTO,
+        ctk.CTkLabel(textos, text="SnapYou", font=self.f_titulo, text_color=COR_TEXTO,
                      anchor="w", height=26).pack(anchor="w")
         ctk.CTkLabel(textos, text="YouTube, Instagram, X e outros sites", font=self.f_sub,
                      text_color=COR_TEXTO_SEC, anchor="w", height=18).pack(anchor="w")
