@@ -67,50 +67,8 @@ def abrir_pasta(caminho):
 # ---------------------------------------------------------------------------
 # Download (roda numa thread separada para nao travar a janela)
 # ---------------------------------------------------------------------------
-# melhor video+audio em MP4; cai para o melhor arquivo unico se preciso.
-# Usado nas duas etapas (busca de metadados e download) para que o "info"
-# obtido na primeira seja coerente com o que a segunda vai baixar.
-FORMATO = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
-
-
-def formatar_duracao(segundos):
-    if not segundos:
-        return "desconhecida"
-    segundos = int(segundos)
-    h, resto = divmod(segundos, 3600)
-    m, s = divmod(resto, 60)
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
-
-
-def resolucoes_disponiveis(info):
-    """Alturas (em pixels) dos formatos de video, da maior para a menor."""
-    alturas = {
-        f["height"]
-        for f in info.get("formats") or []
-        if f.get("height") and f.get("vcodec") != "none"
-    }
-    return sorted(alturas, reverse=True)
-
-
-def buscar_info(url, msg_queue):
-    """Busca so os metadados (sem baixar) e envia o resultado pela fila."""
-    opcoes = {
-        "format": FORMATO,
-        "quiet": True,
-        "no_warnings": True,
-        "ignoreerrors": False,
-    }
-    try:
-        with yt_dlp.YoutubeDL(opcoes) as ydl:
-            info = ydl.extract_info(url, download=False)
-        msg_queue.put(("info", info))
-    except Exception as e:
-        msg_queue.put(("erro", str(e)))
-
-
-def baixar(info, pasta_saida, msg_queue):
-    """Baixa o video a partir do info ja extraido e envia o andamento pela
-    fila msg_queue."""
+def baixar(url, pasta_saida, msg_queue):
+    """Baixa o video e envia o andamento pela fila msg_queue."""
 
     def hook(d):
         status = d.get("status")
@@ -135,7 +93,8 @@ def baixar(info, pasta_saida, msg_queue):
             msg_queue.put(("status", "Convertendo para MP4..."))
 
     opcoes = {
-        "format": FORMATO,
+        # melhor video+audio em MP4; cai para o melhor arquivo unico se preciso
+        "format": "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b",
         "merge_output_format": "mp4",
         "outtmpl": os.path.join(
             pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
@@ -153,8 +112,7 @@ def baixar(info, pasta_saida, msg_queue):
     try:
         os.makedirs(pasta_saida, exist_ok=True)
         with yt_dlp.YoutubeDL(opcoes) as ydl:
-            # reaproveita o info da etapa anterior, sem extrair de novo
-            info = ydl.process_ie_result(info, download=True)
+            info = ydl.extract_info(url, download=True)
             nome = ydl.prepare_filename(info)
         base, _ = os.path.splitext(nome)
         final = base + ".mp4"
@@ -277,37 +235,12 @@ class App(tk.Tk):
             return
 
         self.baixando = True
-        self.btn.config(state="disabled", text="Buscando informacoes...")
+        self.btn.config(state="disabled", text="Baixando...")
         self.barra.config(value=0)
-        self.status.config(
-            text="Buscando informacoes do video...", foreground=COR_TEXTO_SECUNDARIO
-        )
-
-        threading.Thread(
-            target=buscar_info, args=(url, self.msg_queue), daemon=True
-        ).start()
-
-    def _confirmar_download(self, info):
-        """Mostra os metadados e, se o usuario confirmar, inicia o download."""
-        resolucoes = resolucoes_disponiveis(info)
-        texto_res = ", ".join(f"{h}p" for h in resolucoes) or "nao informadas"
-        confirmou = messagebox.askyesno(
-            APP_TITLE,
-            f"Titulo: {info.get('title') or 'desconhecido'}\n"
-            f"Duracao: {formatar_duracao(info.get('duration'))}\n"
-            f"Resolucoes disponiveis: {texto_res}\n\n"
-            "Baixar este video?",
-        )
-        if not confirmou:
-            self.baixando = False
-            self.btn.config(state="normal", text="Baixar video")
-            self.status.config(text="Cancelado.", foreground=COR_TEXTO_SECUNDARIO)
-            return
-
-        self.btn.config(text="Baixando...")
         self.status.config(text="Iniciando...", foreground=COR_TEXTO_SECUNDARIO)
+
         threading.Thread(
-            target=baixar, args=(info, self.pasta.get(), self.msg_queue), daemon=True
+            target=baixar, args=(url, self.pasta.get(), self.msg_queue), daemon=True
         ).start()
 
     # ----- ponte thread -> janela -----
@@ -319,8 +252,6 @@ class App(tk.Tk):
                     self.barra.config(value=dado)
                 elif tipo == "status":
                     self.status.config(text=dado, foreground=COR_TEXTO_SECUNDARIO)
-                elif tipo == "info":
-                    self._confirmar_download(dado)
                 elif tipo == "concluido":
                     self._fim_ok(dado)
                 elif tipo == "erro":
