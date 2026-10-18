@@ -32,7 +32,7 @@ pip install yt-dlp customtkinter pillow
 python app_baixar_video.pyw
 ```
 
-## Gerar o .exe
+## Gerar o .exe (Windows)
 
 ```
 pip install pyinstaller pillow yt-dlp customtkinter
@@ -44,12 +44,34 @@ embute o `ffmpeg.exe` e o `ffprobe.exe` de `C:\ffmpeg\bin` e deixa o resultado e
 `dist\`, copiando também para a Área de Trabalho. Se o ffmpeg estiver em outra
 pasta, ajuste `FFMPEG_BIN` no início do `build_exe.py`.
 
+## Gerar o .app (Mac)
+
+Só funciona rodando no próprio Mac (o PyInstaller não faz build cruzado).
+
+```
+brew install python ffmpeg
+cd mac
+pip3 install pyinstaller pillow yt-dlp customtkinter
+python3 build_mac.py
+```
+
+O script usa o `ffmpeg`/`ffprobe` do Homebrew (achados no PATH), empacota tudo
+com PyInstaller e deixa o resultado em `mac/dist/SnapYou.app`, copiando também
+para a Área de Trabalho. Sem build, dá pra rodar direto o código-fonte:
+
+```
+brew install python ffmpeg
+pip3 install yt-dlp customtkinter pillow
+python3 app_baixar_video.pyw
+```
+
 ## Arquivos
 
 | Arquivo | Para que serve |
 |---|---|
-| `app_baixar_video.pyw` | Código do aplicativo (a janela). |
-| `build_exe.py` | Gera o `.exe` com o ffmpeg embutido. |
+| `app_baixar_video.pyw` | Código do aplicativo (a janela), comum a Windows e Mac. |
+| `build_exe.py` | Gera o `.exe` (Windows) com o ffmpeg embutido. |
+| `mac/build_mac.py` | Gera o `.app` (Mac) com o ffmpeg do Homebrew embutido. |
 | `gerar_icone.py` | Recria os ícones (`.ico`, `.icns` e `.png`). |
 | `icone.ico` / `icone.icns` | Ícone do aplicativo (seta âmbar sobre grafite) no Windows / no Mac. |
 | `icone.png` | Ícone em 1024 px, para usos gerais. |
