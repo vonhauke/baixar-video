@@ -32,7 +32,12 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import yt_dlp
 
 APP_TITLE = "SnapYou"
-DEFAULT_DIR = r"C:\Users\Pedro\Videos"
+if sys.platform == "win32":
+    DEFAULT_DIR = os.path.join(os.path.expanduser("~"), "Videos")
+elif sys.platform == "darwin":
+    DEFAULT_DIR = os.path.join(os.path.expanduser("~"), "Movies")
+else:
+    DEFAULT_DIR = os.path.join(os.path.expanduser("~"), "Videos")
 
 # ---------------------------------------------------------------------------
 # Medidas e cores (copiadas de maquete_baixar_video.html)
@@ -75,10 +80,11 @@ def resource_path(rel):
 
 
 def ffmpeg_dir():
-    """Pasta com o ffmpeg embarcado no .exe. Se nao houver, retorna None e o
-    yt-dlp tenta achar o ffmpeg no PATH do sistema."""
+    """Pasta com o ffmpeg embarcado no executavel. Se nao houver, retorna None
+    e o yt-dlp tenta achar o ffmpeg no PATH do sistema."""
     cand = resource_path("ffmpeg")
-    if os.path.isfile(os.path.join(cand, "ffmpeg.exe")):
+    nome = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    if os.path.isfile(os.path.join(cand, nome)):
         return cand
     return None
 
@@ -86,7 +92,12 @@ def ffmpeg_dir():
 def abrir_pasta(caminho):
     try:
         os.makedirs(caminho, exist_ok=True)
-        os.startfile(caminho)  # type: ignore[attr-defined]  (Windows)
+        if sys.platform == "win32":
+            os.startfile(caminho)  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", caminho], check=True)
+        else:
+            subprocess.run(["xdg-open", caminho], check=True)
     except Exception as e:
         messagebox.showwarning(APP_TITLE, f"Nao foi possivel abrir a pasta:\n{e}")
 
