@@ -39,6 +39,7 @@ elif sys.platform == "darwin":
     DEFAULT_DIR = os.path.join(os.path.expanduser("~"), "Movies")
 else:
     DEFAULT_DIR = os.path.join(os.path.expanduser("~"), "Videos")
+DEFAULT_DIR_AUDIO = os.path.join(os.path.expanduser("~"), "Music")
 
 # ---------------------------------------------------------------------------
 # Medidas e cores (copiadas de maquete_baixar_video.html)
@@ -481,10 +482,11 @@ class App(ctk.CTk):
         # o CustomTkinter troca o icone da janela uns 200 ms depois de abrir
         self.after(250, self._definir_icone)
 
-        self.pasta = DEFAULT_DIR
+        self.modo = "video"             # video (MP4) | audio (MP3)
+        self.pasta_video = DEFAULT_DIR
+        self.pasta_audio = DEFAULT_DIR_AUDIO
         self.msg_queue = queue.Queue()
         self.estado = "inicio"          # inicio | encontrado | baixando
-        self.modo = "video"             # video (MP4) | audio (MP3)
         self.ocupado = False            # buscando informacoes ou baixando
         self.busca_id = 0
         self.info = None
@@ -593,6 +595,8 @@ class App(ctk.CTk):
 
     def _selecionar_modo(self, valor):
         self.modo = "audio" if valor.startswith("Áudio") else "video"
+        self._atualizar_rotulo_pasta()
+        self._atualizar_botao()
 
     def _montar_cartao_video(self):
         self.cartao = ctk.CTkFrame(self.corpo, fg_color=COR_CARTAO, corner_radius=12)
@@ -699,15 +703,16 @@ class App(ctk.CTk):
     def _atualizar_botao(self):
         if self.estado == "baixando":
             return
+        rotulo = "áudio" if self.modo == "audio" else "vídeo"
         if self.estado == "inicio":
             habilitado = bool(self.entrada.get().strip()) and not self.ocupado
             texto = "Buscando…" if self.ocupado else "Buscar vídeo"
         elif self.estado == "concluido":
             habilitado = True
-            texto = "Baixar outro vídeo"
+            texto = f"Baixar outro {rotulo}"
         else:
             habilitado = not self.ocupado
-            texto = "Baixar vídeo"
+            texto = f"Baixar {rotulo}"
         self.btn.configure(
             text=texto,
             state="normal" if habilitado else "disabled",
@@ -743,9 +748,23 @@ class App(ctk.CTk):
         if self.focus_get() is not getattr(self.entrada, "_entry", None):
             self._colar()
 
+    @property
+    def pasta(self):
+        """Pasta de destino: uma para video, outra para audio — cada modo
+        guarda a sua, trocada automaticamente no alternador Video/Audio."""
+        return self.pasta_audio if self.modo == "audio" else self.pasta_video
+
+    @pasta.setter
+    def pasta(self, valor):
+        if self.modo == "audio":
+            self.pasta_audio = valor
+        else:
+            self.pasta_video = valor
+
     def _trocar_pasta(self):
+        rotulo = "audios" if self.modo == "audio" else "videos"
         escolhida = filedialog.askdirectory(
-            title="Escolha a pasta para salvar os videos",
+            title=f"Escolha a pasta para salvar os {rotulo}",
             initialdir=self.pasta if os.path.isdir(self.pasta) else None,
         )
         if escolhida:
