@@ -5,7 +5,8 @@ app_baixar_video.pyw
 SnapYou: aplicativo de janela para baixar videos do YouTube (e outros sites
 suportados pelo yt-dlp). Cole o link, clique em "Buscar video" para ver a
 miniatura, o titulo, a duracao e a melhor qualidade, e depois em "Baixar
-video". O video e salvo em MP4 na pasta escolhida.
+video". Pode escolher entre baixar o video (MP4) ou so o audio (MP3),
+sempre na melhor qualidade disponivel.
 
 Empacotado como .exe com PyInstaller (ver build_exe.py). O ffmpeg vai junto
 dentro do executavel, entao nao precisa de nada instalado na maquina.
@@ -66,8 +67,13 @@ COR_OK = "#7fb38a"
 
 # melhor video+audio em MP4; cai para o melhor arquivo unico se preciso.
 # Usado na busca de informacoes e no download, para que a qualidade mostrada
-# no cartao seja a que sera de fato baixada.
-FORMATO = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
+# no cartao seja a que sera de fato baixada. "bv*"/"ba" ja pedem a MAIOR
+# qualidade disponivel automaticamente — nao precisa (nem da) escolher um
+# numero, o yt-dlp sempre tenta o melhor stream que o site oferecer.
+FORMATO_VIDEO = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
+
+# melhor audio disponivel, para extrair e converter para MP3.
+FORMATO_AUDIO = "ba/b"
 
 
 # ---------------------------------------------------------------------------
@@ -338,10 +344,10 @@ def limitar_linhas(texto, fonte, largura, max_linhas=2):
 # ---------------------------------------------------------------------------
 # Busca de informacoes e download (rodam em threads para nao travar a janela)
 # ---------------------------------------------------------------------------
-def buscar_info(url, busca_id, msg_queue):
+def buscar_info(url, busca_id, msg_queue, modo):
     """Busca so os metadados (sem baixar), manda o resultado e depois a miniatura."""
     opcoes = {
-        "format": FORMATO,
+        "format": FORMATO_AUDIO if modo == "audio" else FORMATO_VIDEO,
         "quiet": True,
         "no_warnings": True,
         "ignoreerrors": False,
@@ -357,10 +363,12 @@ def buscar_info(url, busca_id, msg_queue):
     dados = {
         "id": busca_id,
         "url": url,
+        "modo": modo,
         "titulo": info.get("title") or "Sem titulo",
         "duracao": info.get("duration"),
         "fonte": (info.get("extractor_key") or info.get("extractor") or "").upper(),
         "altura": max((f.get("height") or 0 for f in formatos), default=0) or None,
+        "abr": max((f.get("abr") or 0 for f in formatos), default=0) or None,
         "tamanho": sum(f.get("filesize") or f.get("filesize_approx") or 0 for f in formatos) or None,
     }
     msg_queue.put(("info", dados))
@@ -369,8 +377,8 @@ def buscar_info(url, busca_id, msg_queue):
     msg_queue.put(("miniatura", (busca_id, montar_miniatura(foto, formatar_duracao(dados["duracao"])))))
 
 
-def baixar(url, pasta_saida, msg_queue):
-    """Baixa o video e envia o andamento pela fila msg_queue."""
+def baixar(url, pasta_saida, msg_queue, modo):
+    """Baixa o video (ou so o audio) e envia o andamento pela fila msg_queue."""
 
     def hook(d):
         status = d.get("status")
@@ -401,27 +409,50 @@ def baixar(url, pasta_saida, msg_queue):
             }))
         elif status == "finished":
             msg_queue.put(("progresso", 100))
-            msg_queue.put(("status", "Convertendo para MP4..."))
+            texto = "Convertendo para MP3..." if modo == "audio" else "Convertendo para MP4..."
+            msg_queue.put(("status", texto))
 
     def hook_pos(d):
-        # a juncao de video e audio (ffmpeg) e a etapa "Convertendo para MP4"
+        # a juncao de video+audio (Merger) ou a extracao do audio (ExtractAudio)
+        # e a etapa "Convertendo"
         nome = d.get("postprocessor") or ""
-        if d.get("status") == "started" and any(k in nome for k in ("Merger", "Convertor", "Remuxer")):
+        if d.get("status") == "started" and any(
+            k in nome for k in ("Merger", "Convertor", "Remuxer", "ExtractAudio")
+        ):
             msg_queue.put(("convertendo", None))
 
-    opcoes = {
-        "format": FORMATO,
-        "merge_output_format": "mp4",
-        "outtmpl": os.path.join(
-            pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
-        ),
-        "progress_hooks": [hook],
-        "postprocessor_hooks": [hook_pos],
-        "noprogress": True,
-        "quiet": True,
-        "no_warnings": True,
-        "ignoreerrors": False,
-    }
+    if modo == "audio":
+        opcoes = {
+            "format": FORMATO_AUDIO,
+            # preferredquality "0" = a melhor (escala 0-10, nao e automatico:
+            # sem isso o yt-dlp usa qualidade media por padrao).
+            "postprocessors": [
+                {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "0"}
+            ],
+            "outtmpl": os.path.join(
+                pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
+            ),
+            "progress_hooks": [hook],
+            "postprocessor_hooks": [hook_pos],
+            "noprogress": True,
+            "quiet": True,
+            "no_warnings": True,
+            "ignoreerrors": False,
+        }
+    else:
+        opcoes = {
+            "format": FORMATO_VIDEO,
+            "merge_output_format": "mp4",
+            "outtmpl": os.path.join(
+                pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
+            ),
+            "progress_hooks": [hook],
+            "postprocessor_hooks": [hook_pos],
+            "noprogress": True,
+            "quiet": True,
+            "no_warnings": True,
+            "ignoreerrors": False,
+        }
     ff = ffmpeg_dir()
     if ff:
         opcoes["ffmpeg_location"] = ff
@@ -432,7 +463,7 @@ def baixar(url, pasta_saida, msg_queue):
             info = ydl.extract_info(url, download=True)
             nome = ydl.prepare_filename(info)
         base, _ = os.path.splitext(nome)
-        final = base + ".mp4"
+        final = base + (".mp3" if modo == "audio" else ".mp4")
         msg_queue.put(("concluido", final if os.path.exists(final) else nome))
     except Exception as e:
         msg_queue.put(("erro", str(e)))
@@ -453,6 +484,7 @@ class App(ctk.CTk):
         self.pasta = DEFAULT_DIR
         self.msg_queue = queue.Queue()
         self.estado = "inicio"          # inicio | encontrado | baixando
+        self.modo = "video"             # video (MP4) | audio (MP3)
         self.ocupado = False            # buscando informacoes ou baixando
         self.busca_id = 0
         self.info = None
@@ -479,6 +511,7 @@ class App(ctk.CTk):
 
         self._montar_cabecalho()
         self._montar_campo_link()
+        self._montar_modo()
         self._montar_cartao_video()
         self._montar_progresso()
         self._montar_etapas()
@@ -540,6 +573,26 @@ class App(ctk.CTk):
         self.entrada.bind("<KeyRelease>", lambda e: self._texto_mudou())
         self.entrada.bind("<FocusIn>", lambda e: self.campo.configure(border_color=COR_BORDA_FOCO))
         self.entrada.bind("<FocusOut>", lambda e: self.campo.configure(border_color=COR_BORDA))
+
+    def _montar_modo(self):
+        self.seg_modo = ctk.CTkSegmentedButton(
+            self.corpo,
+            values=["Vídeo (MP4)", "Áudio (MP3)"],
+            font=self.f_pequeno,
+            height=34,
+            corner_radius=8,
+            fg_color=COR_CARTAO,
+            unselected_color=COR_CARTAO,
+            unselected_hover_color=COR_COLAR,
+            selected_color=COR_ACENTO,
+            selected_hover_color=COR_ACENTO_HOVER,
+            text_color=COR_TEXTO,
+            command=self._selecionar_modo,
+        )
+        self.seg_modo.set("Vídeo (MP4)")
+
+    def _selecionar_modo(self, valor):
+        self.modo = "audio" if valor.startswith("Áudio") else "video"
 
     def _montar_cartao_video(self):
         self.cartao = ctk.CTkFrame(self.corpo, fg_color=COR_CARTAO, corner_radius=12)
@@ -622,12 +675,12 @@ class App(ctk.CTk):
     # ----- estados da tela -----
     def _mostrar(self, estado):
         self.estado = estado
-        for w in (self.rotulo_link, self.campo, self.cartao, self.progresso, self.etapas,
-                  self.destino, self.btn, self.dica):
+        for w in (self.rotulo_link, self.campo, self.seg_modo, self.cartao, self.progresso,
+                  self.etapas, self.destino, self.btn, self.dica):
             w.pack_forget()
 
         ordem = {
-            "inicio": [self.rotulo_link, self.campo, self.destino, self.btn],
+            "inicio": [self.rotulo_link, self.campo, self.seg_modo, self.destino, self.btn],
             "encontrado": [self.rotulo_link, self.campo, self.cartao, self.destino, self.btn],
             "baixando": [self.cartao, self.progresso, self.etapas, self.destino],
             "concluido": [self.cartao, self.progresso, self.etapas, self.destino, self.btn],
@@ -725,7 +778,7 @@ class App(ctk.CTk):
         self.entrada.configure(state="disabled")
         self._atualizar_botao()
         threading.Thread(
-            target=buscar_info, args=(url, self.busca_id, self.msg_queue), daemon=True
+            target=buscar_info, args=(url, self.busca_id, self.msg_queue, self.modo), daemon=True
         ).start()
 
     def _baixar(self):
@@ -738,7 +791,7 @@ class App(ctk.CTk):
         self._pintar_etapa("baixando")
         self._mostrar("baixando")
         threading.Thread(
-            target=baixar, args=(self.info["url"], self.pasta, self.msg_queue), daemon=True
+            target=baixar, args=(self.info["url"], self.pasta, self.msg_queue, self.modo), daemon=True
         ).start()
 
     # ----- cartao e progresso -----
@@ -747,9 +800,14 @@ class App(ctk.CTk):
         titulo = limitar_linhas(d["titulo"], self.f_video, 270, 2)
         self.lbl_titulo.configure(text=titulo, wraplength=290, height=19 * (titulo.count("\n") + 1))
         duracao = formatar_duracao(d["duracao"])
-        p1 = (f"{duracao} · " if duracao else "") + ("melhor qualidade: " if d["altura"] else "")
-        p2 = f"{d['altura']}p" if d["altura"] else ""
-        p3 = (" · " if (duracao or d["altura"]) else "") + "MP4"
+        if d["modo"] == "audio":
+            p1 = (f"{duracao} · " if duracao else "") + ("melhor qualidade: " if d["abr"] else "")
+            p2 = f"{int(d['abr'])} kbps" if d["abr"] else ""
+            p3 = (" · " if (duracao or d["abr"]) else "") + "MP3"
+        else:
+            p1 = (f"{duracao} · " if duracao else "") + ("melhor qualidade: " if d["altura"] else "")
+            p2 = f"{d['altura']}p" if d["altura"] else ""
+            p3 = (" · " if (duracao or d["altura"]) else "") + "MP4"
         self.lbl_fatos1.configure(text=p1)
         self.lbl_fatos2.configure(text=p2)
         self.lbl_fatos3.configure(text=p3)
@@ -760,16 +818,17 @@ class App(ctk.CTk):
 
     def _pintar_etapa(self, etapa):
         """etapa: baixando | convertendo | pronto"""
+        rotulo = "Convertendo para MP3" if self.modo == "audio" else "Convertendo para MP4"
         self.lbl_et1.configure(text="✓ Informações", text_color=COR_OK)
         if etapa == "baixando":
             self.lbl_et2.configure(text="● Baixando", text_color=COR_TEXTO)
-            self.lbl_et3.configure(text="○ Convertendo para MP4", text_color=COR_TEXTO_FRACO)
+            self.lbl_et3.configure(text=f"○ {rotulo}", text_color=COR_TEXTO_FRACO)
         elif etapa == "convertendo":
             self.lbl_et2.configure(text="✓ Baixando", text_color=COR_OK)
-            self.lbl_et3.configure(text="● Convertendo para MP4", text_color=COR_TEXTO)
+            self.lbl_et3.configure(text=f"● {rotulo}", text_color=COR_TEXTO)
         else:
             self.lbl_et2.configure(text="✓ Baixando", text_color=COR_OK)
-            self.lbl_et3.configure(text="✓ Convertendo para MP4", text_color=COR_OK)
+            self.lbl_et3.configure(text=f"✓ {rotulo}", text_color=COR_OK)
 
     def _atualizar_bytes(self, d):
         """Soma video + audio: sao dois arquivos baixados em sequencia."""
@@ -831,7 +890,8 @@ class App(ctk.CTk):
     def _ao_converter(self):
         if self.estado != "baixando":
             return
-        self.lbl_prog_titulo.configure(text="Convertendo para MP4…")
+        texto = "Convertendo para MP3…" if self.modo == "audio" else "Convertendo para MP4…"
+        self.lbl_prog_titulo.configure(text=texto)
         self.barra.set(1.0)
         self.lbl_pct.configure(text="100%")
         self.lbl_vel.configure(text="")
