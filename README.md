@@ -88,7 +88,9 @@ python3 build_mac.py
 O script usa o `ffmpeg`/`ffprobe` do Homebrew (achados no PATH), empacota tudo
 com PyInstaller e deixa o resultado em `mac/dist/SnapYou.app`, copiando também
 para a Área de Trabalho. Para embutir binários estáticos, que não dependem do Homebrew
-no Mac de quem usa, aponte a pasta deles: `FFMPEG_DIR=/caminho/da/pasta python3 build_mac.py`. Sem build, dá pra rodar direto o código-fonte:
+no Mac de quem usa, aponte a pasta deles: `FFMPEG_DIR=/caminho/da/pasta python3 build_mac.py`.
+
+Sem build, dá pra rodar direto o código-fonte:
 
 ```
 brew install python ffmpeg
