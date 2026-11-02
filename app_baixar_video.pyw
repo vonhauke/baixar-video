@@ -20,6 +20,8 @@ import math
 import os
 import sys
 import queue
+import shutil
+import tempfile
 import threading
 import subprocess
 import urllib.request
@@ -430,9 +432,7 @@ def baixar(url, pasta_saida, msg_queue, modo):
             "postprocessors": [
                 {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "0"}
             ],
-            "outtmpl": os.path.join(
-                pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
-            ),
+            # "outtmpl" e definido abaixo, apontando para uma subpasta temporaria
             "progress_hooks": [hook],
             "postprocessor_hooks": [hook_pos],
             "noprogress": True,
@@ -458,16 +458,37 @@ def baixar(url, pasta_saida, msg_queue, modo):
     if ff:
         opcoes["ffmpeg_location"] = ff
 
+    pasta_tmp = None
     try:
         os.makedirs(pasta_saida, exist_ok=True)
+        if modo == "audio":
+            # baixa numa subpasta temporaria (dentro da pasta de destino) e so
+            # move o MP3 pronto no fim. Baixando direto em pasta_saida, um
+            # "AAAA-MM-DD - Titulo.mp4" ja baixado no modo Video com o mesmo
+            # nome seria tratado como "ja baixado" e o ExtractAudio apagaria
+            # esse .mp4 depois de extrair o MP3 (keepvideo=False).
+            pasta_tmp = tempfile.mkdtemp(prefix=".snapyou-audio-", dir=pasta_saida)
+            opcoes["outtmpl"] = os.path.join(
+                pasta_tmp, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"
+            )
         with yt_dlp.YoutubeDL(opcoes) as ydl:
             info = ydl.extract_info(url, download=True)
             nome = ydl.prepare_filename(info)
         base, _ = os.path.splitext(nome)
         final = base + (".mp3" if modo == "audio" else ".mp4")
-        msg_queue.put(("concluido", final if os.path.exists(final) else nome))
+        pronto = final if os.path.exists(final) else nome
+        if pasta_tmp:
+            destino = os.path.join(pasta_saida, os.path.basename(pronto))
+            os.replace(pronto, destino)
+            pronto = destino
+        msg_queue.put(("concluido", pronto))
     except Exception as e:
         msg_queue.put(("erro", str(e)))
+    finally:
+        # apaga a subpasta temporaria com o que sobrou (arquivos parciais,
+        # audio original antes da conversao etc.), tambem em caso de erro
+        if pasta_tmp:
+            shutil.rmtree(pasta_tmp, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
