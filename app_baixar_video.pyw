@@ -21,7 +21,9 @@ import io
 import math
 import os
 import re
+import shutil
 import sys
+import tempfile
 import queue
 import threading
 import subprocess
@@ -650,8 +652,15 @@ def baixar(url, pasta_saida, msg_queue, modo, cancelar=None):
             "format": FORMATO_VIDEO,
             "merge_output_format": "mp4",
         }
+    # No modo audio o arquivo baixado e so um intermediario: o ffmpeg extrai o
+    # MP3 e o yt-dlp apaga o original. Se ele fosse baixado direto na pasta de
+    # destino, um video ja existente com o mesmo nome (ex.: "Titulo.mp4" baixado
+    # antes no modo Video) seria tomado como "ja baixado" e apagado no fim.
+    # Por isso o audio e montado numa pasta temporaria propria e so o MP3
+    # final e movido para a pasta escolhida.
+    pasta_trabalho = tempfile.mkdtemp(prefix="snapyou-") if modo == "audio" else pasta_saida
     opcoes.update({
-        "outtmpl": os.path.join(pasta_saida, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"),
+        "outtmpl": os.path.join(pasta_trabalho, "%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s"),
         "progress_hooks": [hook],
         "postprocessor_hooks": [hook_pos],
         "noprogress": True,
@@ -680,13 +689,30 @@ def baixar(url, pasta_saida, msg_queue, modo, cancelar=None):
             nome = ydl.prepare_filename(info)
         base, _ = os.path.splitext(nome)
         final = base + (".mp3" if modo == "audio" else ".mp4")
-        msg_queue.put(("concluido", final if os.path.exists(final) else nome))
+        if not os.path.exists(final):
+            final = nome
+        if modo == "audio":
+            final = mover_para_pasta(final, pasta_saida)
+        msg_queue.put(("concluido", final))
     except Exception as e:
         if cancelar.is_set() or isinstance(e, yt_dlp.utils.DownloadCancelled):
             limpar_parciais()
             msg_queue.put(("cancelado", None))
         else:
             msg_queue.put(("erro", str(e)))
+    finally:
+        if pasta_trabalho != pasta_saida:
+            shutil.rmtree(pasta_trabalho, ignore_errors=True)
+
+
+def mover_para_pasta(arquivo, pasta):
+    """Move `arquivo` para `pasta`, substituindo um arquivo de mesmo nome
+    (o mesmo comportamento de baixar de novo direto na pasta). Devolve o novo caminho."""
+    destino = os.path.join(pasta, os.path.basename(arquivo))
+    if os.path.isfile(destino):
+        os.remove(destino)
+    shutil.move(arquivo, destino)
+    return destino
 
 
 # ---------------------------------------------------------------------------
