@@ -49,6 +49,19 @@ pip install yt-dlp customtkinter pillow
 python app_baixar_video.pyw
 ```
 
+## Builds automáticos (GitHub Actions)
+
+A cada envio para a `main`, a automação `.github/workflows/gerar-exe.yml` abre o app e
+passa por todas as telas num Windows e num Mac da nuvem do GitHub. Depois gera:
+
+- `SnapYou-Windows`: o `SnapYou.exe`, com o ffmpeg embutido;
+- `SnapYou-Mac-AppleSilicon` e `SnapYou-Mac-Intel`: o `SnapYou.app` de cada tipo de Mac, com um ffmpeg
+  estático embutido.
+
+Para baixar, abra a aba **Actions** do repositório, entre na execução mais recente e role até
+**Artifacts**. No Mac, o app não é assinado com certificado da Apple. Na primeira vez, clique nele com
+o botão direito → **Abrir**, ou vá em **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**.
+
 ## Gerar o .exe (Windows)
 
 ```
@@ -74,7 +87,8 @@ python3 build_mac.py
 
 O script usa o `ffmpeg`/`ffprobe` do Homebrew (achados no PATH), empacota tudo
 com PyInstaller e deixa o resultado em `mac/dist/SnapYou.app`, copiando também
-para a Área de Trabalho. Sem build, dá pra rodar direto o código-fonte:
+para a Área de Trabalho. Para embutir binários estáticos, que não dependem do Homebrew
+no Mac de quem usa, aponte a pasta deles: `FFMPEG_DIR=/caminho/da/pasta python3 build_mac.py`. Sem build, dá pra rodar direto o código-fonte:
 
 ```
 brew install python ffmpeg
