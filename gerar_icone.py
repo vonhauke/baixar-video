@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-Gera o icone do aplicativo (seta de download ambar sobre fundo grafite):
+Gera o icone do aplicativo (seta de download branca sobre squircle azul,
+no estilo dos icones do macOS / Windows 11):
   - icone.ico   -> Windows (16 a 256 px)
   - icone.icns  -> Mac (16 a 1024 px, com a margem e a sombra da grade do macOS)
-  - icone.png   -> 1024 px, para usos gerais
+  - icone.png   -> 1024 px, para usos gerais (e icone da janela no Mac/Linux)
+
+E a mesma arte de desenhar_marca() no app_baixar_video.pyw.
 
 Uso:
     python gerar_icone.py      (precisa do pillow: pip install pillow)
@@ -11,11 +14,18 @@ Uso:
 
 from PIL import Image, ImageDraw, ImageFilter
 
-TOPO = (42, 47, 56)      # grafite claro
-BASE = (20, 23, 28)      # grafite escuro
-AMBAR = (212, 162, 76)
-MARFIM = (236, 230, 216)
+TOPO = (64, 156, 255)    # azul claro
+BASE = (0, 98, 214)      # azul profundo
+BRANCO = (255, 255, 255, 255)
 S = 4                    # supersampling para bordas suaves
+
+
+def _linha_redonda(d, pts, largura, cor):
+    """Polilinha com pontas e juncoes redondas."""
+    d.line(pts, fill=cor, width=int(largura), joint="curve")
+    r = largura / 2
+    for x, y in pts:
+        d.ellipse([x - r, y - r, x + r, y + r], fill=cor)
 
 
 def desenhar(tam):
@@ -31,13 +41,13 @@ def desenhar(tam):
         cor = tuple(int(TOPO[i] + (BASE[i] - TOPO[i]) * t) for i in range(3)) + (255,)
         g.line([(0, y), (n, y)], fill=cor)
     mask = Image.new("L", (n, n), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, n - 1, n - 1], radius=int(228 * k), fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, n - 1, n - 1], radius=int(230 * k), fill=255)
     img.paste(grad, (0, 0), mask)
 
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([452 * k, 210 * k, 572 * k, 540 * k], radius=int(18 * k), fill=AMBAR)  # haste
-    d.polygon([(300 * k, 470 * k), (724 * k, 470 * k), (512 * k, 700 * k)], fill=AMBAR)       # ponta
-    d.rounded_rectangle([290 * k, 760 * k, 734 * k, 830 * k], radius=int(35 * k), fill=MARFIM)  # base
+    _linha_redonda(d, [(512 * k, 232 * k), (512 * k, 640 * k)], 96 * k, BRANCO)                         # haste
+    _linha_redonda(d, [(330 * k, 470 * k), (512 * k, 652 * k), (694 * k, 470 * k)], 96 * k, BRANCO)     # ponta
+    d.rounded_rectangle([284 * k, 764 * k, 740 * k, 852 * k], radius=44 * k, fill=(255, 255, 255, 235))  # bandeja
     return img.resize((tam, tam), Image.LANCZOS)
 
 

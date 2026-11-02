@@ -42,6 +42,7 @@ args = [
     "--workpath", os.path.join(AQUI, "build"),
     "--specpath", AQUI,
     "--icon", os.path.join(RAIZ, "icone.icns"),
+    "--add-data", f"{os.path.join(RAIZ, 'icone.png')}:.",
     "--collect-all", "yt_dlp",
     "--collect-all", "customtkinter",
 ]
