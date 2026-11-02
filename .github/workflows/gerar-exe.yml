@@ -1,0 +1,52 @@
+# Gera o SnapYou.exe num Windows da nuvem do GitHub a cada envio para a main
+# (ou para a branch do redesign) e quando acionado pela aba Actions.
+# O .exe fica disponivel para download na pagina da execucao, em "Artifacts".
+name: Gerar SnapYou.exe
+
+on:
+  push:
+    branches: [main, redesign-tema-claro]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: python -m pip install --upgrade pip pyinstaller pillow yt-dlp customtkinter
+
+      - name: Baixar o ffmpeg para C:\ffmpeg\bin (o build_exe.py procura ali)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp
+          New-Item -ItemType Directory -Force C:\ffmpeg\bin | Out-Null
+          Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffmpeg.exe).FullName C:\ffmpeg\bin\
+          Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffprobe.exe).FullName C:\ffmpeg\bin\
+          C:\ffmpeg\bin\ffmpeg.exe -version | Select-Object -First 1
+
+      - name: Teste rapido - abrir a janela no Windows
+        run: python .github/teste_janela.py
+
+      - name: Gerar o .exe
+        run: python build_exe.py
+
+      - name: Conferir o .exe
+        shell: pwsh
+        run: |
+          $exe = "dist\SnapYou.exe"
+          if (-not (Test-Path $exe)) { throw "SnapYou.exe nao foi gerado" }
+          "{0:N0} MB" -f ((Get-Item $exe).Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnapYou-Windows
+          path: dist/SnapYou.exe
+          retention-days: 30
