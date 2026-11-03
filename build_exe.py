@@ -3,7 +3,7 @@
 build_exe.py
 
 Gera "SnapYou.exe" (um unico arquivo) a partir de app_baixar_video.pyw.
-O ffmpeg e o ffprobe vao embutidos, entao o .exe roda em qualquer PC Windows
+A interface (pasta ui/), o ffmpeg e o ffprobe vao embutidos, entao o .exe roda em qualquer PC Windows
 sem precisar instalar Python, yt-dlp ou ffmpeg.
 
 Uso:
@@ -45,8 +45,10 @@ args = [
     "--name", "SnapYou",
     "--icon", "icone.ico",
     "--add-data", "icone.ico;.",
+    "--add-data", "icone.png;.",
+    "--add-data", "ui;ui",               # a interface (HTML/CSS/JS, fontes e icones)
     "--collect-all", "yt_dlp",
-    "--collect-all", "customtkinter",
+    "--collect-all", "webview",          # pywebview (janela com o Edge WebView2)
 ]
 
 if os.path.isfile(ffmpeg_exe):

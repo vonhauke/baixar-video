@@ -3,14 +3,16 @@
 build_mac.py
 
 Gera "SnapYou.app" a partir de ../app_baixar_video.pyw. O ffmpeg e o ffprobe
-(instalados via "brew install ffmpeg") vao embutidos, entao o app roda em
-qualquer Mac sem precisar instalar Python, yt-dlp ou ffmpeg.
+vao embutidos, entao o app roda em qualquer Mac sem precisar instalar Python,
+yt-dlp ou ffmpeg. Por padrao usa os do PATH ("brew install ffmpeg"); para usar
+binarios estaticos (que nao dependem do Homebrew), aponte a pasta deles na
+variavel FFMPEG_DIR - e o que faz a automacao do GitHub (gerar-exe.yml).
 
 So funciona rodando no proprio Mac (o PyInstaller nao faz build cruzado).
 
 Uso:
     cd mac
-    pip3 install pyinstaller yt-dlp customtkinter pillow
+    pip3 install pyinstaller yt-dlp pywebview
     python3 build_mac.py
 
 Depois, copie "dist/SnapYou.app" para a pasta Aplicativos.
@@ -28,22 +30,33 @@ import PyInstaller.__main__
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
 
-ffmpeg_exe = shutil.which("ffmpeg")
-ffprobe_exe = shutil.which("ffprobe")
+PASTA_FFMPEG = os.environ.get("FFMPEG_DIR")
+if PASTA_FFMPEG:
+    ffmpeg_exe = os.path.join(PASTA_FFMPEG, "ffmpeg")
+    ffprobe_exe = os.path.join(PASTA_FFMPEG, "ffprobe")
+    for exe in (ffmpeg_exe, ffprobe_exe):
+        if not os.path.isfile(exe):
+            sys.exit(f"FFMPEG_DIR aponta para {PASTA_FFMPEG}, mas {exe} nao existe.")
+else:
+    ffmpeg_exe = shutil.which("ffmpeg")
+    ffprobe_exe = shutil.which("ffprobe")
 
 args = [
     os.path.join(RAIZ, "app_baixar_video.pyw"),
     "--noconfirm",
     "--clean",
-    "--onefile",
+    # pasta (onedir), o formato recomendado pelo PyInstaller para .app:
+    # abre mais rapido que o arquivo unico (que nao combina com .app)
     "--windowed",
     "--name", "SnapYou",
     "--distpath", os.path.join(AQUI, "dist"),
     "--workpath", os.path.join(AQUI, "build"),
     "--specpath", AQUI,
     "--icon", os.path.join(RAIZ, "icone.icns"),
+    "--add-data", f"{os.path.join(RAIZ, 'icone.png')}:.",
+    "--add-data", f"{os.path.join(RAIZ, 'ui')}:ui",   # a interface (HTML/CSS/JS, fontes e icones)
     "--collect-all", "yt_dlp",
-    "--collect-all", "customtkinter",
+    "--collect-all", "webview",                       # pywebview (janela com o WebKit do Mac)
 ]
 
 if ffmpeg_exe:

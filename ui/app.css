@@ -1,0 +1,89 @@
+/* SnapYou - estilos proprios (o resto vem do design system em ds/) */
+
+.janela {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 28px 22px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.palco {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 18px;
+  min-height: 0;
+}
+
+/* ---------- cartao do video ---------- */
+.cartao-video { overflow: hidden; animation: sobe 260ms var(--curva); }
+.video { display: grid; grid-template-columns: 168px 1fr; gap: 16px; padding: 14px; }
+.miniatura {
+  position: relative; width: 168px; height: 94px; border-radius: 10px; overflow: hidden;
+  background: linear-gradient(135deg, var(--fundo-fundo), var(--superficie-ativa));
+  box-shadow: inset 0 0 0 1px var(--borda);
+}
+.miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity var(--t-medio); }
+.miniatura img.carregada { opacity: 1; }
+.miniatura .play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(20, 20, 19, .55); color: #fff; backdrop-filter: blur(4px);
+}
+.miniatura .play .ic { margin-left: 2px; fill: #fff; }
+.miniatura .duracao {
+  position: absolute; right: 6px; bottom: 6px; padding: 1px 6px; border-radius: 5px;
+  background: rgba(20, 20, 19, .72); color: #fff; font-size: 11px; font-weight: 600;
+}
+.miniatura .duracao:empty { display: none; }
+
+.video-meta { min-width: 0; display: flex; flex-direction: column; }
+.video-fonte { font-size: var(--texto-xs); font-weight: 600; color: var(--acento-texto); letter-spacing: .01em; }
+.video-titulo {
+  margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 17px; line-height: 1.32;
+}
+.video-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 10px; }
+
+.esqueleto-video .miniatura { box-shadow: none; }
+
+/* ---------- paineis do rodape do cartao ---------- */
+.painel { border-top: 1px solid var(--borda); padding: 14px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+.progresso-topo { align-items: baseline; }
+.progresso-titulo { font-weight: 600; }
+.pct { font-size: 24px; line-height: 1; }
+.progresso-pe { margin-top: 2px; gap: 16px; }
+.progresso-pe .etapas { flex: 1; min-width: 0; }
+
+.sucesso { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.sucesso-icone {
+  width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--sucesso-forte); color: #fff; animation: estoura 380ms var(--curva);
+}
+.sucesso-titulo { font-family: var(--fonte-serif); font-weight: 500; font-size: 17px; }
+.sucesso-acoes { flex-wrap: wrap; margin-top: 2px; }
+@keyframes estoura { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: none; opacity: 1; } }
+
+/* ---------- caixa do link ---------- */
+.composer .segmentado button .texto-3 { font-size: 11px; font-weight: 600; }
+.composer .segmentado button[aria-pressed="true"] .texto-3 { color: var(--acento-texto); }
+#btn-pasta { max-width: 190px; }
+#btn-colar { color: var(--texto-2); }
+
+.dica { margin: 2px 0 0; text-align: center; font-size: var(--texto-sm); color: var(--texto-3); }
+.dica b { font-weight: 600; color: var(--texto-2); }
+
+/* com o cartao na tela, o conteudo sobe; sem ele, fica centralizado */
+.palco.com-cartao { justify-content: flex-start; }
+
+/* janelas estreitas */
+@media (max-width: 560px) {
+  .janela { padding: 20px 16px 16px; }
+  .video { grid-template-columns: 128px 1fr; }
+  .miniatura { width: 128px; height: 72px; }
+  .segmentado button .texto-3 { display: none; }
+}
