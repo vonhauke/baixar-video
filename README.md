@@ -105,6 +105,7 @@ python3 app_baixar_video.pyw
 | Arquivo | Para que serve |
 |---|---|
 | `app_baixar_video.pyw` | Motor do app (busca e download com o yt-dlp, conversão com o ffmpeg) e a ponte com a interface. |
+| `argila.py` | Parte Python do design system (janela, tema escuro, eventos para a interface), igual em todos os apps. |
 | `ui/` | A interface: `index.html`, `app.css` e `app.js`. |
 | `ui/ds/` | Design system **Argila** (cores, fontes, componentes e ícones), igual em todos os apps. |
 | `build_exe.py` | Gera o `.exe` (Windows) com o ffmpeg embutido. |
@@ -119,7 +120,8 @@ python3 app_baixar_video.pyw
 ## Design
 
 A tela é feita em HTML/CSS e mostrada numa janela nativa pelo [pywebview](https://pywebview.flowrl.com/):
-Edge WebView2 no Windows (já vem no Windows 10 e 11) e WebKit no Mac.
+Edge WebView2 no Windows (já vem no Windows 11 e na maioria dos Windows 10; se faltar, o app avisa e
+abre a página de download da Microsoft) e WebKit no Mac.
 
 - **Design system Argila** (`ui/ds/`): inspirado no visual dos apps do Claude. `tokens.css` tem as cores
   (claro e escuro), fontes, espaçamentos e sombras; `components.css` tem os componentes (botões, caixa do

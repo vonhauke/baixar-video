@@ -17,20 +17,19 @@ O ffmpeg vai junto, entao nao precisa de nada instalado na maquina.
 """
 
 import base64
-import json
 import os
 import queue
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
 import time
 import urllib.request
 
-import webview
 import yt_dlp
+
+import argila
 
 APP_TITLE = "SnapYou"
 if sys.platform == "win32":
@@ -47,7 +46,6 @@ NOMES_PASTAS = {"Videos": "Vídeos", "Movies": "Filmes", "Music": "Música",
 
 LARGURA, ALTURA = 640, 660          # tamanho inicial da janela (redimensionavel)
 ALTURA_MIN, LARGURA_MIN = 560, 500
-COR_FUNDO_CLARO, COR_FUNDO_ESCURO = "#FAF9F5", "#262624"   # = --fundo do design system
 
 
 
@@ -73,10 +71,7 @@ NOMES_FONTE = {
 # ---------------------------------------------------------------------------
 # Utilidades
 # ---------------------------------------------------------------------------
-def resource_path(rel):
-    """Caminho de um recurso, funcionando tanto rodando o .py quanto o .exe."""
-    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base, rel)
+resource_path = argila.recurso
 
 
 def ffmpeg_dir():
@@ -90,27 +85,10 @@ def ffmpeg_dir():
 
 
 def abrir_no_sistema(caminho):
-    """Abre um arquivo ou pasta com o programa padrao. Levanta excecao se falhar."""
+    """Abre um arquivo ou pasta (criando a pasta se ainda nao existir)."""
     if os.path.isdir(caminho) or not os.path.splitext(caminho)[1]:
         os.makedirs(caminho, exist_ok=True)
-    if sys.platform == "win32":
-        os.startfile(caminho)  # type: ignore[attr-defined]
-    elif sys.platform == "darwin":
-        subprocess.run(["open", caminho], check=True)
-    else:
-        subprocess.run(["xdg-open", caminho], check=True)
-
-
-def mostrar_na_pasta(arquivo):
-    """Abre a pasta do arquivo com ele ja selecionado (Explorer / Finder)."""
-    arquivo = os.path.normpath(arquivo)
-    if sys.platform == "win32":
-        # o explorer devolve 1 mesmo quando da certo; por isso sem check
-        subprocess.run(["explorer", "/select,", arquivo])
-    elif sys.platform == "darwin":
-        subprocess.run(["open", "-R", arquivo], check=True)
-    else:
-        subprocess.run(["xdg-open", os.path.dirname(arquivo)], check=True)
+    argila.abrir_no_sistema(caminho)
 
 
 def nome_da_fonte(chave):
@@ -352,83 +330,6 @@ def nome_da_pasta(caminho):
     return NOMES_PASTAS.get(nome, nome)
 
 
-def ler_area_de_transferencia():
-    """Texto copiado (Ctrl+C) no sistema, ou "" se nao houver/nao der para ler."""
-    try:
-        if sys.platform == "win32":
-            import ctypes
-            from ctypes import wintypes
-
-            u32, k32 = ctypes.windll.user32, ctypes.windll.kernel32
-            u32.GetClipboardData.restype = wintypes.HANDLE
-            k32.GlobalLock.argtypes = [wintypes.HGLOBAL]
-            k32.GlobalLock.restype = wintypes.LPVOID
-            k32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
-            CF_UNICODETEXT = 13
-            if not u32.OpenClipboard(None):
-                return ""
-            try:
-                h = u32.GetClipboardData(CF_UNICODETEXT)
-                if not h:
-                    return ""
-                p = k32.GlobalLock(h)
-                try:
-                    return ctypes.wstring_at(p) if p else ""
-                finally:
-                    k32.GlobalUnlock(h)
-            finally:
-                u32.CloseClipboard()
-        if sys.platform == "darwin":
-            r = subprocess.run(["pbpaste"], capture_output=True, timeout=3,
-                               env=dict(os.environ, LANG="en_US.UTF-8"))
-            return r.stdout.decode("utf-8", "replace")
-        for cmd in (["wl-paste", "--no-newline"], ["xclip", "-o", "-selection", "clipboard"],
-                    ["xsel", "--clipboard", "--output"]):
-            if shutil.which(cmd[0]):
-                r = subprocess.run(cmd, capture_output=True, timeout=3)
-                if r.returncode == 0:
-                    return r.stdout.decode("utf-8", "replace")
-    except Exception:
-        pass
-    return ""
-
-
-def sistema_no_tema_escuro():
-    """True se o Windows/Mac estiver no modo escuro (para a cor de fundo inicial)."""
-    try:
-        if sys.platform == "win32":
-            import winreg
-
-            chave = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, chave) as k:
-                return winreg.QueryValueEx(k, "AppsUseLightTheme")[0] == 0
-        if sys.platform == "darwin":
-            r = subprocess.run(["defaults", "read", "-g", "AppleInterfaceStyle"],
-                               capture_output=True, text=True, timeout=3)
-            return "dark" in r.stdout.lower()
-    except Exception:
-        pass
-    return False
-
-
-def barra_de_titulo_escura(janela):
-    """No Windows 10/11, deixa a barra de titulo escura quando o sistema esta no
-    modo escuro (o WebView2 nao faz isso sozinho)."""
-    if sys.platform != "win32" or not sistema_no_tema_escuro():
-        return
-    try:
-        import ctypes
-
-        hwnd = janela.native.Handle.ToInt32()
-        valor = ctypes.c_int(1)
-        for atributo in (20, 19):   # DWMWA_USE_IMMERSIVE_DARK_MODE (Win11/Win10 20H1+, e antigo)
-            if ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, atributo, ctypes.byref(valor), ctypes.sizeof(valor)) == 0:
-                break
-    except Exception:
-        pass
-
-
 # ---------------------------------------------------------------------------
 # Ponte com a interface (o JavaScript chama os metodos de Api)
 # ---------------------------------------------------------------------------
@@ -438,6 +339,7 @@ class Api:
 
     def __init__(self):
         self._janela = None
+        self._emissor = argila.Emissor("SnapYou")
         self._fila = queue.Queue()
         self._cancelar = threading.Event()
         self._pastas = {"video": DEFAULT_DIR, "audio": DEFAULT_DIR_AUDIO}
@@ -445,12 +347,8 @@ class Api:
 
     # ----- eventos do motor -> interface -----
     def _emitir(self, evento):
-        if self._janela is None:
-            return
-        try:
-            self._janela.evaluate_js(f"SnapYou.receber({json.dumps(evento, ensure_ascii=False)})")
-        except Exception:
-            pass
+        self._emissor.janela = self._janela
+        self._emissor(evento)
 
     def _repassar_eventos(self):
         """Le a fila do motor (buscar_info/baixar) e repassa para a interface.
@@ -508,7 +406,7 @@ class Api:
                 "mac": sys.platform == "darwin"}
 
     def colar(self):
-        return ler_area_de_transferencia().strip()
+        return argila.ler_area_de_transferencia().strip()
 
     def buscar(self, url, modo, busca_id):
         threading.Thread(target=buscar_info, args=(url, busca_id, self._fila, modo), daemon=True).start()
@@ -523,9 +421,8 @@ class Api:
 
     def trocar_pasta(self, modo):
         atual = self._pastas[modo]
-        tipo = getattr(getattr(webview, "FileDialog", None), "FOLDER", None) or webview.FOLDER_DIALOG
         escolha = self._janela.create_file_dialog(
-            tipo, directory=atual if os.path.isdir(atual) else "")
+            argila.TIPO_PASTA, directory=atual if os.path.isdir(atual) else "")
         if not escolha:
             return None
         pasta = escolha[0] if isinstance(escolha, (list, tuple)) else escolha
@@ -546,28 +443,16 @@ class Api:
 
     def mostrar_na_pasta(self, caminho):
         try:
-            mostrar_na_pasta(caminho)
+            argila.mostrar_na_pasta(caminho)
         except Exception as e:
             return str(e).strip()[:200] or "Erro desconhecido"
 
 
 def main():
     api = Api()
-    escuro = sistema_no_tema_escuro()
-    janela = webview.create_window(
-        APP_TITLE,
-        url=resource_path(os.path.join("ui", "index.html")),
-        js_api=api,
-        width=LARGURA, height=ALTURA, min_size=(LARGURA_MIN, ALTURA_MIN),
-        background_color=COR_FUNDO_ESCURO if escuro else COR_FUNDO_CLARO,
-        text_select=False,
-    )
+    janela = argila.criar_janela(APP_TITLE, api, LARGURA, ALTURA, LARGURA_MIN, ALTURA_MIN)
     api._janela = janela
-    janela.events.shown += lambda: barra_de_titulo_escura(janela)
-    icone = resource_path("icone.png")
-    webview.start(http_server=True, private_mode=True,
-                  icon=icone if os.path.isfile(icone) else None,
-                  debug=os.environ.get("SNAPYOU_DEBUG") == "1")
+    argila.iniciar(icone="icone.png", debug_env="SNAPYOU_DEBUG", titulo=APP_TITLE)
 
 
 if __name__ == "__main__":

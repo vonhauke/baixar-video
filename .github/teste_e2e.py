@@ -25,6 +25,7 @@ import time
 import traceback
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)
 os.environ["NO_PROXY"] = os.environ["no_proxy"] = "127.0.0.1,localhost"
 
 loader = importlib.machinery.SourceFileLoader("app", os.path.join(RAIZ, "app_baixar_video.pyw"))
