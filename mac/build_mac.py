@@ -12,7 +12,7 @@ So funciona rodando no proprio Mac (o PyInstaller nao faz build cruzado).
 
 Uso:
     cd mac
-    pip3 install pyinstaller yt-dlp customtkinter pillow
+    pip3 install pyinstaller yt-dlp pywebview
     python3 build_mac.py
 
 Depois, copie "dist/SnapYou.app" para a pasta Aplicativos.
@@ -54,8 +54,9 @@ args = [
     "--specpath", AQUI,
     "--icon", os.path.join(RAIZ, "icone.icns"),
     "--add-data", f"{os.path.join(RAIZ, 'icone.png')}:.",
+    "--add-data", f"{os.path.join(RAIZ, 'ui')}:ui",   # a interface (HTML/CSS/JS, fontes e icones)
     "--collect-all", "yt_dlp",
-    "--collect-all", "customtkinter",
+    "--collect-all", "webview",                       # pywebview (janela com o WebKit do Mac)
 ]
 
 if ffmpeg_exe:

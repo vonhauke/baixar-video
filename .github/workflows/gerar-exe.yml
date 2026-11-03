@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: python -m pip install --upgrade pip pyinstaller pillow yt-dlp customtkinter
+        run: python -m pip install --upgrade pip pyinstaller yt-dlp pywebview
 
       - name: Baixar o ffmpeg para C:\ffmpeg\bin (o build_exe.py procura ali)
         shell: pwsh
@@ -32,8 +32,10 @@ jobs:
           Copy-Item (Get-ChildItem ffmpeg-tmp -Recurse -Filter ffprobe.exe).FullName C:\ffmpeg\bin\
           C:\ffmpeg\bin\ffmpeg.exe -version | Select-Object -First 1
 
-      - name: Teste rapido - abrir a janela no Windows
-        run: python .github/teste_janela.py
+      - name: Teste de ponta a ponta na janela real (buscar, baixar video e audio, cancelar, erro)
+        env:
+          FFMPEG_DIR: C:\ffmpeg\bin
+        run: python .github/teste_e2e.py
 
       - name: Gerar o .exe
         run: python build_exe.py
@@ -44,6 +46,13 @@ jobs:
           $exe = "dist\SnapYou.exe"
           if (-not (Test-Path $exe)) { throw "SnapYou.exe nao foi gerado" }
           "{0:N0} MB" -f ((Get-Item $exe).Length / 1MB)
+          # abre o .exe de verdade e confere que continua aberto depois de 20 s
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "o SnapYou.exe fechou sozinho (codigo $($p.ExitCode))" }
+          Stop-Process -Id $p.Id -Force
+          Get-Process SnapYou -ErrorAction SilentlyContinue | Stop-Process -Force
+          "o .exe abriu e ficou aberto"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -73,7 +82,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: python -m pip install --upgrade pip pyinstaller pillow yt-dlp customtkinter
+        run: python -m pip install --upgrade pip pyinstaller yt-dlp pywebview
 
       - name: Baixar ffmpeg e ffprobe estaticos (nao dependem do Homebrew)
         run: |
@@ -90,8 +99,10 @@ jobs:
           echo "Bibliotecas usadas (so as do sistema):"
           otool -L ffmpeg-mac/ffmpeg
 
-      - name: Teste rapido - abrir a janela no Mac
-        run: python .github/teste_janela.py
+      - name: Teste de ponta a ponta na janela real (buscar, baixar video e audio, cancelar, erro)
+        env:
+          FFMPEG_DIR: ${{ github.workspace }}/ffmpeg-mac
+        run: python .github/teste_e2e.py
 
       - name: Gerar o .app
         env:

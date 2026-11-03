@@ -6,10 +6,10 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 
 ![SnapYou nos temas claro e escuro](docs/capturas/vitrine.png)
 
-- Visual claro e limpo, inspirado nas diretrizes de design da Apple, com **tema escuro automático**
-  (segue o tema do Windows/Mac)
-- Cores com contraste conferido pela WCAG 2.1 (nível AA) e fonte nativa de cada sistema
-  (Segoe UI Variable no Windows 11, San Francisco no Mac)
+- Visual no estilo dos apps do Claude (design system **Argila**, em `ui/ds/`): fundo creme, laranja terracota,
+  títulos em serifa (Source Serif 4) e interface em DM Sans, com **tema escuro automático** que segue o Windows/Mac
+- Cores com contraste conferido pela WCAG 2.1 (nível AA)
+- Caixa do link no estilo da caixa de mensagem do Claude, com o formato (Vídeo/Áudio) e a pasta dentro dela
 - Cartão com miniatura, origem, título, duração, melhor qualidade, formato e tamanho estimado antes de baixar
 - Vídeo (MP4) ou só áudio (MP3), cada um com a sua pasta de destino
 - Progresso com porcentagem, quantidade baixada, velocidade, tempo restante e etapas
@@ -26,12 +26,13 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 ## Como usar
 
 1. Baixe o `.exe` na página de [**Releases**](https://github.com/vonhauke/baixar-video/releases) e dê dois cliques.
-2. Cole o link do vídeo (botão **Colar**, ou `Ctrl+V` em qualquer lugar da janela; no Mac, `⌘V`).
-3. Escolha **Vídeo (MP4)** ou **Áudio (MP3)**.
-4. Clique em **Buscar vídeo** (ou tecle `Enter`): aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
-5. Se quiser, troque a pasta em **Trocar** (padrão: `Vídeos` para vídeo, `Música` para áudio). **Abrir** mostra a pasta.
+2. Cole o link do vídeo na caixa (botão **Colar**, ou `Ctrl+V` em qualquer lugar da janela; no Mac, `⌘V`).
+3. Escolha **Vídeo MP4** ou **Áudio MP3**, logo abaixo do link.
+4. Clique na seta laranja (ou tecle `Enter`): aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
+5. Se quiser, troque a pasta no botão da pasta (padrão: `Vídeos` para vídeo, `Música` para áudio):
+   **Trocar pasta…** escolhe outra, **Abrir pasta** mostra a atual.
 6. Clique em **Baixar vídeo** e acompanhe: Informações → Baixando → Convertendo para MP4.
-   Para interromper, clique em **Cancelar download** (ou tecle `Esc`).
+   Para interromper, clique em **Cancelar** (ou tecle `Esc`).
 7. Ao terminar, use **Abrir arquivo**, **Mostrar na pasta** ou **Baixar outro vídeo** para recomeçar.
 
 Se algo der errado (link inválido, vídeo privado, sem internet…), um aviso aparece no topo da janela
@@ -42,17 +43,18 @@ explicando o motivo, com o botão **Tentar de novo**.
 
 ## Rodar pelo código-fonte
 
-Requisitos: Python 3.10+ e [ffmpeg](https://ffmpeg.org/download.html) no PATH.
+Requisitos: Python 3.10+ e [ffmpeg](https://ffmpeg.org/download.html) no PATH. No Linux, também o WebKit
+(`sudo apt install python3-gi gir1.2-webkit2-4.1`).
 
 ```
-pip install yt-dlp customtkinter pillow
+pip install yt-dlp pywebview
 python app_baixar_video.pyw
 ```
 
 ## Builds automáticos (GitHub Actions)
 
-A cada envio para a `main`, a automação `.github/workflows/gerar-exe.yml` abre o app e
-passa por todas as telas num Windows e num Mac da nuvem do GitHub. Depois gera:
+A cada envio para a `main`, a automação `.github/workflows/gerar-exe.yml` roda o teste de ponta a ponta
+(`.github/teste_e2e.py`) na janela real, num Windows e num Mac da nuvem do GitHub. Depois gera:
 
 - `SnapYou-Windows`: o `SnapYou.exe`, com o ffmpeg embutido;
 - `SnapYou-Mac-AppleSilicon` e `SnapYou-Mac-Intel`: o `SnapYou.app` de cada tipo de Mac, com um ffmpeg
@@ -65,7 +67,7 @@ o botão direito → **Abrir**, ou vá em **Ajustes do Sistema → Privacidade e
 ## Gerar o .exe (Windows)
 
 ```
-pip install pyinstaller pillow yt-dlp customtkinter
+pip install pyinstaller yt-dlp pywebview
 python build_exe.py
 ```
 
@@ -81,7 +83,7 @@ Só funciona rodando no próprio Mac (o PyInstaller não faz build cruzado).
 ```
 brew install python ffmpeg
 cd mac
-pip3 install pyinstaller pillow yt-dlp customtkinter
+pip3 install pyinstaller yt-dlp pywebview
 python3 build_mac.py
 ```
 
@@ -94,7 +96,7 @@ Sem build, dá pra rodar direto o código-fonte:
 
 ```
 brew install python ffmpeg
-pip3 install yt-dlp customtkinter pillow
+pip3 install yt-dlp pywebview
 python3 app_baixar_video.pyw
 ```
 
@@ -102,23 +104,32 @@ python3 app_baixar_video.pyw
 
 | Arquivo | Para que serve |
 |---|---|
-| `app_baixar_video.pyw` | Código do aplicativo (a janela), comum a Windows e Mac. |
+| `app_baixar_video.pyw` | Motor do app (busca e download com o yt-dlp, conversão com o ffmpeg) e a ponte com a interface. |
+| `ui/` | A interface: `index.html`, `app.css` e `app.js`. |
+| `ui/ds/` | Design system **Argila** (cores, fontes, componentes e ícones), igual em todos os apps. |
 | `build_exe.py` | Gera o `.exe` (Windows) com o ffmpeg embutido. |
-| `mac/build_mac.py` | Gera o `.app` (Mac) com o ffmpeg do Homebrew embutido. |
-| `gerar_icone.py` | Recria os ícones (`.ico`, `.icns` e `.png`). |
-| `icone.ico` / `icone.icns` | Ícone do aplicativo (seta branca sobre azul) no Windows / no Mac. |
-| `icone.png` | Ícone em 1024 px, para usos gerais (e ícone da janela no Mac/Linux). |
+| `mac/build_mac.py` | Gera o `.app` (Mac) com o ffmpeg embutido. |
+| `gerar_icone.py` | Recria os ícones (`.ico`, `.icns`, `.png` e `ui/icone.png`). |
+| `icone.ico` / `icone.icns` | Ícone do aplicativo (seta creme sobre laranja terracota) no Windows / no Mac. |
+| `icone.png` | Ícone em 1024 px, para usos gerais. |
+| `.github/teste_e2e.py` | Teste de ponta a ponta: abre a janela real e baixa vídeo e áudio, cancela e provoca um erro. |
 | `docs/capturas/` | Capturas de tela usadas neste README. |
 | `baixar_video.py` | Versão original, só de linha de comando. |
 
 ## Design
 
-- **Cores:** cada cor tem uma versão clara e uma escura (dicionário `C` no início do
-  `app_baixar_video.pyw`); o CustomTkinter troca sozinho quando o tema do sistema muda.
-  Cor de destaque: azul `#0071E3` (texto branco sobre ele com contraste 4,7:1).
-- **Tema:** `ctk.set_appearance_mode("system")` no final do arquivo. Para forçar o claro,
-  troque por `"light"`.
-- **Janela:** largura fixa de 560 px; a altura acompanha o conteúdo de cada tela.
+A tela é feita em HTML/CSS e mostrada numa janela nativa pelo [pywebview](https://pywebview.flowrl.com/):
+Edge WebView2 no Windows (já vem no Windows 10 e 11) e WebKit no Mac.
+
+- **Design system Argila** (`ui/ds/`): inspirado no visual dos apps do Claude. `tokens.css` tem as cores
+  (claro e escuro), fontes, espaçamentos e sombras; `components.css` tem os componentes (botões, caixa do
+  link, cartões, menus, avisos, progresso, etapas, formulários, tabelas); `icons.js` tem os ícones
+  ([Lucide](https://lucide.dev), licença ISC).
+- **Fontes:** Source Serif 4 (títulos) e DM Sans (interface), ambas livres (licença OFL), embutidas em `ui/ds/fonts/`.
+- **Cores:** fundo creme `#FAF9F5`, texto `#141413`, laranja `#D97757` (destaques) e `#BB5835` nos botões
+  (texto branco sobre ele com contraste 4,6:1). Tema escuro quente: fundo `#262624`, cartões `#30302E`.
+- **Tema:** segue o sistema. Para forçar um tema, use `<html data-tema="claro">` ou `"escuro"` em `ui/index.html`.
+- **Janela:** 640 × 660 px ao abrir, redimensionável.
 
 ## Se o download parar de funcionar
 

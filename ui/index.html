@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SnapYou</title>
+  <link rel="stylesheet" href="ds/tokens.css">
+  <link rel="stylesheet" href="ds/components.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="janela">
+    <header class="marca">
+      <img src="icone.png" alt="">
+      <div>
+        <div class="marca-nome">SnapYou</div>
+        <div class="marca-sub">Baixe vídeos e músicas do YouTube, Instagram, X e outros sites</div>
+      </div>
+    </header>
+
+    <main id="palco" class="palco">
+      <!-- aviso de erro / informacao -->
+      <div id="aviso" class="aviso oculto" role="alert">
+        <span class="aviso-icone" id="aviso-icone"></span>
+        <div class="aviso-titulo" id="aviso-titulo"></div>
+        <button class="btn btn-icone aviso-fechar" id="aviso-fechar" title="Fechar (Esc)"><i data-icone="x"></i></button>
+        <div class="aviso-texto" id="aviso-texto"></div>
+        <div class="aviso-detalhe selecionavel" id="aviso-detalhe"></div>
+        <div class="aviso-acoes" id="aviso-acoes">
+          <button class="btn btn-secundario btn-sm" id="aviso-acao"><i data-icone="rotate-ccw" data-tamanho="14"></i>Tentar de novo</button>
+        </div>
+      </div>
+
+      <!-- cartao do video: encontrado -> baixando -> concluido -->
+      <section id="cartao" class="cartao cartao-video oculto" aria-live="polite">
+        <div class="video">
+          <div class="miniatura" id="miniatura">
+            <img id="miniatura-img" alt="">
+            <span class="play"><i data-icone="play" data-tamanho="16"></i></span>
+            <span class="duracao numeros" id="duracao"></span>
+          </div>
+          <div class="video-meta">
+            <div class="video-fonte" id="video-fonte"></div>
+            <h2 class="titulo-sm video-titulo" id="video-titulo"></h2>
+            <div class="video-tags" id="video-tags"></div>
+          </div>
+        </div>
+
+        <!-- carregando (esqueleto) -->
+        <div class="video esqueleto-video" id="esqueleto">
+          <div class="miniatura esqueleto"></div>
+          <div class="video-meta">
+            <div class="esqueleto" style="width: 64px; height: 12px"></div>
+            <div class="esqueleto" style="width: 92%; height: 16px; margin-top: 10px"></div>
+            <div class="esqueleto" style="width: 60%; height: 16px; margin-top: 8px"></div>
+            <div class="esqueleto" style="width: 120px; height: 20px; margin-top: 14px"></div>
+          </div>
+        </div>
+
+        <!-- encontrado -->
+        <div class="cartao-rodape" id="rodape-encontrado">
+          <span class="pequeno texto-3" id="legenda-qualidade"></span>
+          <span class="espaco"></span>
+          <button class="btn btn-primario" id="btn-baixar"><i data-icone="download"></i><span id="btn-baixar-texto">Baixar vídeo</span></button>
+        </div>
+
+        <!-- baixando / convertendo -->
+        <div class="painel" id="painel-progresso">
+          <div class="linha progresso-topo">
+            <span class="progresso-titulo" id="prog-titulo">Baixando…</span>
+            <span class="espaco"></span>
+            <span class="pct serif numeros" id="prog-pct">0%</span>
+          </div>
+          <div class="progresso" id="prog-barra"><span></span></div>
+          <div class="linha pequeno texto-3 numeros">
+            <span id="prog-vel">Iniciando…</span>
+            <span class="espaco"></span>
+            <span id="prog-eta"></span>
+          </div>
+          <div class="linha progresso-pe">
+            <div class="etapas" id="etapas"></div>
+            <button class="btn btn-secundario btn-sm" id="btn-cancelar">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- concluido -->
+        <div class="painel" id="painel-sucesso">
+          <div class="sucesso">
+            <span class="sucesso-icone"><i data-icone="check" data-tamanho="18" data-traco="2.5"></i></span>
+            <div class="cortar">
+              <div class="sucesso-titulo">Download concluído</div>
+              <div class="pequeno texto-2 cortar selecionavel" id="arquivo-nome"></div>
+              <div class="mini texto-3" id="arquivo-pasta"></div>
+            </div>
+          </div>
+          <div class="etapas" id="etapas-ok"></div>
+          <div class="linha sucesso-acoes">
+            <button class="btn btn-secundario btn-sm" id="btn-abrir-arquivo"><i data-icone="play" data-tamanho="14"></i>Abrir arquivo</button>
+            <button class="btn btn-secundario btn-sm" id="btn-mostrar-pasta"><i data-icone="folder-open" data-tamanho="14"></i>Mostrar na pasta</button>
+            <span class="espaco"></span>
+            <button class="btn btn-primario btn-sm" id="btn-outro"><i data-icone="plus" data-tamanho="14"></i><span id="btn-outro-texto">Baixar outro vídeo</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- caixa do link, no estilo da caixa de mensagem do Claude -->
+      <div class="composer" id="composer">
+        <input id="link" class="composer-campo" type="text" spellcheck="false" autocomplete="off"
+               placeholder="Cole aqui o link do vídeo" aria-label="Link do vídeo">
+        <div class="composer-barra">
+          <div class="segmentado" role="group" aria-label="Formato">
+            <button id="modo-video" aria-pressed="true" title="Baixar o vídeo em MP4"><i data-icone="video" data-tamanho="14"></i>Vídeo <span class="texto-3">MP4</span></button>
+            <button id="modo-audio" aria-pressed="false" title="Baixar só o áudio em MP3"><i data-icone="music" data-tamanho="14"></i>Áudio <span class="texto-3">MP3</span></button>
+          </div>
+          <div class="menu-ancora">
+            <button class="pilula" data-menu="menu-pasta" aria-haspopup="menu" aria-expanded="false" id="btn-pasta" title="Pasta onde o arquivo será salvo">
+              <i data-icone="folder" data-tamanho="14"></i><span class="cortar" id="pasta-nome">Vídeos</span><i class="ic-fim" data-icone="chevron-down" data-tamanho="14"></i>
+            </button>
+            <div class="menu para-cima" id="menu-pasta" role="menu">
+              <div class="menu-titulo">Salvar em</div>
+              <button class="menu-item" role="menuitem" id="menu-trocar"><i data-icone="folder" data-tamanho="15"></i>Trocar pasta…</button>
+              <button class="menu-item" role="menuitem" id="menu-abrir"><i data-icone="folder-open" data-tamanho="15"></i>Abrir pasta<span class="detalhe" id="pasta-caminho"></span></button>
+            </div>
+          </div>
+          <span class="espaco"></span>
+          <button class="btn btn-fantasma btn-sm" id="btn-colar" title="Colar o link copiado"><i data-icone="clipboard" data-tamanho="15"></i>Colar</button>
+          <button class="btn btn-enviar" id="btn-buscar" title="Buscar vídeo (Enter)" aria-label="Buscar vídeo" disabled><i data-icone="arrow-up" data-tamanho="18" data-traco="2.25"></i></button>
+        </div>
+      </div>
+
+      <p class="dica" id="dica">Copie o link e clique em <b>Colar</b>, ou pressione <kbd id="atalho">Ctrl</kbd> <kbd>V</kbd> em qualquer lugar.</p>
+    </main>
+  </div>
+
+  <script src="ds/icons.js"></script>
+  <script src="ds/ds.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

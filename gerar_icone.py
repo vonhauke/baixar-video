@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Gera o icone do aplicativo (seta de download branca sobre squircle azul,
-no estilo dos icones do macOS / Windows 11):
+Gera o icone do aplicativo (seta de download creme descendo numa bandeja,
+sobre squircle laranja terracota - paleta do design system "Argila"):
   - icone.ico   -> Windows (16 a 256 px)
   - icone.icns  -> Mac (16 a 1024 px, com a margem e a sombra da grade do macOS)
-  - icone.png   -> 1024 px, para usos gerais (e icone da janela no Mac/Linux)
-
-E a mesma arte de desenhar_marca() no app_baixar_video.pyw.
+  - icone.png   -> 1024 px, para usos gerais
+  - ui/icone.png -> 256 px, logo no cabecalho do app
 
 Uso:
     python gerar_icone.py      (precisa do pillow: pip install pillow)
@@ -14,9 +13,9 @@ Uso:
 
 from PIL import Image, ImageDraw, ImageFilter
 
-TOPO = (64, 156, 255)    # azul claro
-BASE = (0, 98, 214)      # azul profundo
-BRANCO = (255, 255, 255, 255)
+TOPO = (224, 133, 101)   # laranja terracota claro
+BASE = (193, 92, 58)     # laranja terracota profundo
+CREME = (250, 249, 245, 255)
 S = 4                    # supersampling para bordas suaves
 
 
@@ -45,9 +44,11 @@ def desenhar(tam):
     img.paste(grad, (0, 0), mask)
 
     d = ImageDraw.Draw(img)
-    _linha_redonda(d, [(512 * k, 232 * k), (512 * k, 640 * k)], 96 * k, BRANCO)                         # haste
-    _linha_redonda(d, [(330 * k, 470 * k), (512 * k, 652 * k), (694 * k, 470 * k)], 96 * k, BRANCO)     # ponta
-    d.rounded_rectangle([284 * k, 764 * k, 740 * k, 852 * k], radius=44 * k, fill=(255, 255, 255, 235))  # bandeja
+    traco = 84 * k
+    _linha_redonda(d, [(512 * k, 214 * k), (512 * k, 590 * k)], traco, CREME)                           # haste
+    _linha_redonda(d, [(352 * k, 440 * k), (512 * k, 600 * k), (672 * k, 440 * k)], traco, CREME)       # ponta
+    _linha_redonda(d, [(262 * k, 640 * k), (262 * k, 790 * k), (762 * k, 790 * k), (762 * k, 640 * k)],
+                   traco, CREME)                                                                       # bandeja
     return img.resize((tam, tam), Image.LANCZOS)
 
 
@@ -73,4 +74,5 @@ if __name__ == "__main__":
     mac[1024].save("icone.icns", append_images=[mac[t] for t in (16, 32, 64, 128, 256, 512)])
 
     desenhar(1024).save("icone.png")
-    print("icone.ico, icone.icns e icone.png gerados")
+    desenhar(256).save("ui/icone.png")
+    print("icone.ico, icone.icns, icone.png e ui/icone.png gerados")
