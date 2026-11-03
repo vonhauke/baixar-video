@@ -27,6 +27,9 @@ import traceback
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 os.environ["NO_PROXY"] = os.environ["no_proxy"] = "127.0.0.1,localhost"
+# o yt-dlp procura o ffmpeg no PATH (no .exe/.app ele vai embutido)
+if os.environ.get("FFMPEG_DIR"):
+    os.environ["PATH"] = os.environ["FFMPEG_DIR"] + os.pathsep + os.environ["PATH"]
 
 loader = importlib.machinery.SourceFileLoader("app", os.path.join(RAIZ, "app_baixar_video.pyw"))
 spec = importlib.util.spec_from_loader("app", loader)
