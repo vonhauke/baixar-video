@@ -35,6 +35,7 @@ loader = importlib.machinery.SourceFileLoader("app", os.path.join(RAIZ, "app_bai
 spec = importlib.util.spec_from_loader("app", loader)
 app = importlib.util.module_from_spec(spec)
 loader.exec_module(app)
+import argila  # noqa: E402
 import webview  # noqa: E402
 
 TMP = tempfile.mkdtemp(prefix="snapyou-teste-")
@@ -205,7 +206,8 @@ def main():
     janela = webview.create_window("SnapYou (teste)", url=app.resource_path(os.path.join("ui", "index.html")),
                                    js_api=api, width=app.LARGURA, height=app.ALTURA)
     api._janela = janela
-    webview.start(roteiro, (janela, api, base), http_server=True, private_mode=True)
+    # abre pelo mesmo caminho do app de verdade (argila.iniciar, com o ícone)
+    argila.iniciar(roteiro, (janela, api, base), icone="icone.png", titulo="SnapYou")
 
     shutil.rmtree(TMP, ignore_errors=True)
     if falhas:
