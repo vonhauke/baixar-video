@@ -129,7 +129,7 @@ def roteiro(janela, api, base):
         js(f"document.getElementById({json.dumps(id_)}).click()")
 
     try:
-        esperar("document.documentElement.classList.contains('pronto')", 30, "interface pronta")
+        esperar("document.documentElement.classList.contains('pronto')", 90, "interface pronta")
         capturar("01-inicio")
 
         # 1) video
