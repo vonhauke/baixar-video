@@ -4,11 +4,11 @@ Baixe vídeos (MP4) ou só o áudio (MP3) do YouTube e de outros sites: é só c
 
 | Sistema | Arquivo |
 |---|---|
-| Windows 10/11 | `SnapYou-Windows.exe` |
-| Mac com chip Apple (M1, M2, M3, M4…) | `SnapYou-Mac-AppleSilicon.zip` |
-| Mac com processador Intel | `SnapYou-Mac-Intel.zip` |
+| Windows 10 ou 11 | `SnapYou-Windows.exe` |
+| Mac com chip Apple (M1, M2, M3, M4…), macOS 14 Sonoma ou mais novo | `SnapYou-Mac-AppleSilicon.zip` |
+| Mac com processador Intel, macOS 15 Sequoia ou mais novo | `SnapYou-Mac-Intel.zip` |
 
-Não sabe qual é o seu Mac? Clique na maçã () → **Sobre Este Mac**. Se aparecer "Chip", use o *AppleSilicon*; se aparecer "Processador" com a palavra Intel, use o *Intel*.
+Não sabe qual é o seu Mac? Clique na maçã () → **Sobre Este Mac**. Se aparecer "Chip", use o *AppleSilicon*; se aparecer "Processador" com a palavra Intel, use o *Intel*. A mesma tela mostra a versão do macOS.
 
 Não precisa instalar nada: o ffmpeg já vai dentro do aplicativo.
 

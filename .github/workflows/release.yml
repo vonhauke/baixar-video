@@ -85,11 +85,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # O ffmpeg do Homebrew exige o macOS em que foi compilado, entao o
+        # servidor escolhido define a versao minima do app. "macos_minimo" e
+        # o que prometemos nas notas da release; o teste falha se passar disso.
         include:
-          - runner: macos-latest
+          - runner: macos-14
             sufixo: AppleSilicon
+            macos_minimo: "14.0"
           - runner: macos-15-intel
             sufixo: Intel
+            macos_minimo: "15.0"
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
@@ -140,6 +145,16 @@ jobs:
             echo "ATENCAO: nao vi libavcodec ser carregada"; FALHA=1
           fi
           grep -m1 "ffmpeg version" "$RUNNER_TEMP/ffmpeg_libs.txt" || true
+          echo "--- versao minima do macOS exigida pelo app ---"
+          MAX=$(for f in $(find "$MEI" -type f \( -name "ffmpeg" -o -name "ffprobe" -o -name "*.dylib" -o -name "*.so" \)); do
+            otool -l "$f" 2>/dev/null | awk '/LC_BUILD_VERSION/{b=1} b && /minos/{print $2; b=0} /LC_VERSION_MIN_MACOSX/{m=1} m && /version/{print $2; m=0}'
+          done | sort -V | tail -1)
+          MINIMO="${{ matrix.macos_minimo }}"
+          echo "maior exigencia encontrada: macOS $MAX (prometido: $MINIMO)"
+          if [ -z "$MAX" ] || [ "$(printf '%s\n%s\n' "$MAX" "$MINIMO" | sort -V | tail -1)" != "$MINIMO" ]; then
+            echo "ATENCAO: o app exige um macOS mais novo que o prometido ($MINIMO)"
+            FALHA=1
+          fi
           pkill -f "SnapYou.app/Contents/MacOS/SnapYou" || true
           exit $FALHA
 

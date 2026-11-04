@@ -14,8 +14,9 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 ## Como usar
 
 1. Baixe o aplicativo na página de [**Releases**](https://github.com/vonhauke/baixar-video/releases):
-   `SnapYou-Windows.exe` no Windows, ou o `.zip` do Mac (`AppleSilicon` para chip M1 ou mais novo,
-   `Intel` para Macs com processador Intel). Dê dois cliques para abrir.
+   `SnapYou-Windows.exe` no Windows (10 ou 11), ou o `.zip` do Mac: `AppleSilicon` para chip M1 ou
+   mais novo (macOS 14 ou mais novo) e `Intel` para Macs com processador Intel (macOS 15 ou mais
+   novo). Dê dois cliques para abrir.
 2. Cole o link do vídeo (botão **Colar** ou `Ctrl+V`).
 3. Clique em **Buscar vídeo**: aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
 4. Se quiser, troque a pasta em **Trocar** (padrão: `C:\Users\Usuario\Videos`).
