@@ -1,0 +1,170 @@
+name: Release
+
+# Gera o SnapYou para Windows e Mac e, quando a execucao vem de uma tag "v*",
+# publica uma release com os tres arquivos. Rodando manualmente (Actions >
+# Release > Run workflow) so gera os arquivos, sem publicar nada.
+#
+# Para publicar uma versao nova:
+#   git tag v2.1
+#   git push origin v2.1
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYINSTALLER: "6.22.2"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # build_exe.py procura o ffmpeg em C:\ffmpeg\bin; baixamos o mesmo build
+      # (gyan.dev, "essentials") que se usa localmente e conferimos o SHA-256.
+      - name: ffmpeg
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
+          $hashFile = Join-Path $env:RUNNER_TEMP "ffmpeg.zip.sha256"
+          $base = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+          Invoke-WebRequest $base -OutFile $zip
+          Invoke-WebRequest "$base.sha256" -OutFile $hashFile
+          $esperado = ((Get-Content $hashFile -Raw).Trim() -split '\s+')[0]
+          $obtido = (Get-FileHash $zip -Algorithm SHA256).Hash
+          if ($obtido -ne $esperado) { throw "SHA-256 do ffmpeg nao confere: $obtido (esperado $esperado)" }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP "ffmpeg")
+          $ff = Get-ChildItem (Join-Path $env:RUNNER_TEMP "ffmpeg") -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          New-Item -ItemType Directory -Force C:\ffmpeg\bin | Out-Null
+          Copy-Item (Join-Path $ff.DirectoryName "ffmpeg.exe"), (Join-Path $ff.DirectoryName "ffprobe.exe") C:\ffmpeg\bin
+          & C:\ffmpeg\bin\ffmpeg.exe -version | Select-Object -First 1
+
+      - name: Dependencias
+        run: python -m pip install pyinstaller==${{ env.PYINSTALLER }} pillow yt-dlp customtkinter
+
+      - name: Gerar o .exe
+        run: python build_exe.py
+
+      - name: Teste de abertura e do ffmpeg embutido
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\SnapYou.exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "SnapYou fechou sozinho (codigo $($p.ExitCode))" }
+          $mei = Get-ChildItem $env:TEMP -Directory -Filter "_MEI*" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $mei) { throw "Nao achei a pasta de arquivos extraidos (_MEI*)" }
+          $ff = Join-Path $mei.FullName "ffmpeg\ffmpeg.exe"
+          if (-not (Test-Path $ff)) { throw "ffmpeg.exe nao esta dentro do app" }
+          & $ff -version | Select-Object -First 1
+          Stop-Process -Id $p.Id -Force
+
+      - name: Separar o arquivo da release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory saida | Out-Null
+          Copy-Item dist\SnapYou.exe saida\SnapYou-Windows.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: saida/*
+          retention-days: 3
+          if-no-files-found: error
+
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            sufixo: AppleSilicon
+          - runner: macos-15-intel
+            sufixo: Intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # mac/build_mac.py embute o ffmpeg e o ffprobe achados no PATH
+      - name: ffmpeg (Homebrew)
+        run: |
+          brew install ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Dependencias
+        run: python -m pip install pyinstaller==${{ env.PYINSTALLER }} pillow yt-dlp customtkinter
+
+      - name: Gerar o .app
+        run: python mac/build_mac.py
+
+      # Abre o app, espera, e confere que o ffmpeg embutido nao depende de
+      # bibliotecas do Homebrew (que um Mac sem Homebrew nao tem).
+      - name: Teste de abertura e do ffmpeg embutido
+        run: |
+          mac/dist/SnapYou.app/Contents/MacOS/SnapYou &
+          PID=$!
+          sleep 25
+          if ! kill -0 "$PID" 2>/dev/null; then echo "SnapYou fechou sozinho"; exit 1; fi
+          MEI=$(ls -d "${TMPDIR:-/tmp}"/_MEI* | head -1)
+          echo "Arquivos extraidos em: $MEI"
+          ls -la "$MEI/ffmpeg" || { echo "pasta ffmpeg nao encontrada dentro do app"; exit 1; }
+          echo "--- dependencias do ffmpeg embutido ---"
+          otool -L "$MEI/ffmpeg/ffmpeg"
+          FALHA=0
+          for f in $(find "$MEI" -type f \( -name "ffmpeg" -o -name "ffprobe" -o -name "*.dylib" \)); do
+            RUIM=$(otool -L "$f" 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew|/usr/local)' || true)
+            if [ -n "$RUIM" ]; then echo "ATENCAO: $f usa biblioteca fora do app:"; echo "$RUIM"; FALHA=1; fi
+          done
+          "$MEI/ffmpeg/ffmpeg" -version | head -1
+          pkill -f "SnapYou.app/Contents/MacOS/SnapYou" || true
+          exit $FALHA
+
+      - name: Compactar o .app
+        run: |
+          mkdir saida
+          ditto -c -k --sequesterRsrc --keepParent mac/dist/SnapYou.app "saida/SnapYou-Mac-${{ matrix.sufixo }}.zip"
+          ls -la saida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-${{ matrix.sufixo }}
+          path: saida/*
+          retention-days: 3
+          if-no-files-found: error
+
+  publicar:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: arquivos
+          merge-multiple: true
+
+      - name: Criar a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la arquivos
+          gh release create "$GITHUB_REF_NAME" arquivos/* \
+            --title "SnapYou ${GITHUB_REF_NAME#v}" \
+            --notes-file .github/release-notes.md

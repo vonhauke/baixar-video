@@ -1,6 +1,6 @@
 # SnapYou
 
-SnapYou é um aplicativo de janela para Windows que baixa vídeos do YouTube (e de outros sites
+SnapYou é um aplicativo de janela para Windows e Mac que baixa vídeos do YouTube (e de outros sites
 suportados pelo [yt-dlp](https://github.com/yt-dlp/yt-dlp)) em **MP4**.
 Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 
@@ -9,19 +9,22 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 - Escolha da pasta de destino e progresso com porcentagem, velocidade, tempo restante e etapas
 - Melhor qualidade disponível, convertida para MP4
 - O arquivo é salvo como `AAAA-MM-DD - Título.mp4`
-- O `ffmpeg` vai embutido no `.exe`: não precisa instalar Python, yt-dlp nem ffmpeg
+- O `ffmpeg` vai embutido no aplicativo: não precisa instalar Python, yt-dlp nem ffmpeg
 
 ## Como usar
 
-1. Baixe o `.exe` na página de [**Releases**](https://github.com/vonhauke/baixar-video/releases) e dê dois cliques.
+1. Baixe o aplicativo na página de [**Releases**](https://github.com/vonhauke/baixar-video/releases):
+   `SnapYou-Windows.exe` no Windows, ou o `.zip` do Mac (`AppleSilicon` para chip M1 ou mais novo,
+   `Intel` para Macs com processador Intel). Dê dois cliques para abrir.
 2. Cole o link do vídeo (botão **Colar** ou `Ctrl+V`).
 3. Clique em **Buscar vídeo**: aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
 4. Se quiser, troque a pasta em **Trocar** (padrão: `C:\Users\Usuario\Videos`).
 5. Clique em **Baixar vídeo** e acompanhe: Informações → Baixando → Convertendo para MP4.
 6. Ao terminar, a tela mostra **Concluído**. Use **Abrir** para ver o arquivo ou **Baixar outro vídeo** para recomeçar.
 
-> O Windows pode mostrar um aviso do SmartScreen na primeira vez, porque o `.exe`
-> não é assinado. Clique em **Mais informações → Executar assim mesmo**.
+> O aplicativo não é assinado, então o sistema pede uma confirmação na primeira vez.
+> No Windows, clique em **Mais informações → Executar assim mesmo** no aviso do SmartScreen.
+> No Mac, vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**.
 
 ## Rodar pelo código-fonte
 
@@ -76,6 +79,20 @@ python3 app_baixar_video.pyw
 | `icone.ico` / `icone.icns` | Ícone do aplicativo (seta âmbar sobre grafite) no Windows / no Mac. |
 | `icone.png` | Ícone em 1024 px, para usos gerais. |
 | `baixar_video.py` | Versão original, só de linha de comando. |
+| `.github/workflows/release.yml` | Gera o app de Windows e Mac no GitHub e publica a release. |
+| `.github/release-notes.md` | Texto da release (downloads e avisos de primeira abertura). |
+
+## Publicar uma versão nova
+
+O GitHub gera o `.exe` e os dois `.zip` do Mac sozinho, num computador Windows e em dois Macs
+dele, e anexa tudo a uma release. Basta criar uma tag e enviá-la:
+
+```
+git tag v2.1
+git push origin v2.1
+```
+
+Para só testar o build sem publicar, use **Actions → Release → Run workflow**.
 
 ## Se o download parar de funcionar
 
