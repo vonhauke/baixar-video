@@ -122,14 +122,24 @@ jobs:
           MEI=$(ls -d "${TMPDIR:-/tmp}"/_MEI* | head -1)
           echo "Arquivos extraidos em: $MEI"
           ls -la "$MEI/ffmpeg" || { echo "pasta ffmpeg nao encontrada dentro do app"; exit 1; }
-          echo "--- dependencias do ffmpeg embutido ---"
-          otool -L "$MEI/ffmpeg/ffmpeg"
           FALHA=0
-          for f in $(find "$MEI" -type f \( -name "ffmpeg" -o -name "ffprobe" -o -name "*.dylib" \)); do
-            RUIM=$(otool -L "$f" 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew|/usr/local)' || true)
-            if [ -n "$RUIM" ]; then echo "ATENCAO: $f usa biblioteca fora do app:"; echo "$RUIM"; FALHA=1; fi
-          done
-          "$MEI/ffmpeg/ffmpeg" -version | head -1
+          echo "--- caminhos de busca (LC_RPATH) do ffmpeg embutido ---"
+          otool -l "$MEI/ffmpeg/ffmpeg" | grep -A2 LC_RPATH || echo "(nenhum)"
+          # O que importa e de onde o ffmpeg carrega as bibliotecas de verdade:
+          # elas tem de vir de dentro do app, nao do Homebrew.
+          echo "--- bibliotecas que o ffmpeg embutido carrega ---"
+          if ! DYLD_PRINT_LIBRARIES=1 "$MEI/ffmpeg/ffmpeg" -version > "$RUNNER_TEMP/ffmpeg_libs.txt" 2>&1; then
+            cat "$RUNNER_TEMP/ffmpeg_libs.txt"; echo "ffmpeg embutido nao executa"; FALHA=1
+          fi
+          grep -E "\.dylib" "$RUNNER_TEMP/ffmpeg_libs.txt" | grep -v -E "/usr/lib/|/System/" | sed -E 's/^dyld\[[0-9]+\]: //' || true
+          if grep -E "\.dylib" "$RUNNER_TEMP/ffmpeg_libs.txt" | grep -q -E "/opt/homebrew|/usr/local/"; then
+            echo "ATENCAO: o ffmpeg embutido esta usando bibliotecas do Homebrew, que um Mac sem Homebrew nao tem"
+            FALHA=1
+          fi
+          if ! grep -q -E "libavcodec" "$RUNNER_TEMP/ffmpeg_libs.txt"; then
+            echo "ATENCAO: nao vi libavcodec ser carregada"; FALHA=1
+          fi
+          grep -m1 "ffmpeg version" "$RUNNER_TEMP/ffmpeg_libs.txt" || true
           pkill -f "SnapYou.app/Contents/MacOS/SnapYou" || true
           exit $FALHA
 
