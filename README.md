@@ -16,7 +16,7 @@ Cole o link, confira o vídeo encontrado e clique em **Baixar vídeo**.
 1. Baixe o `.exe` na página de [**Releases**](https://github.com/vonhauke/baixar-video/releases) e dê dois cliques.
 2. Cole o link do vídeo (botão **Colar** ou `Ctrl+V`).
 3. Clique em **Buscar vídeo**: aparece o cartão com a miniatura, o título, a duração e a melhor qualidade.
-4. Se quiser, troque a pasta em **Trocar** (padrão: `C:\Users\Pedro\Videos`).
+4. Se quiser, troque a pasta em **Trocar** (padrão: `C:\Users\Usuario\Videos`).
 5. Clique em **Baixar vídeo** e acompanhe: Informações → Baixando → Convertendo para MP4.
 6. Ao terminar, a tela mostra **Concluído**. Use **Abrir** para ver o arquivo ou **Baixar outro vídeo** para recomeçar.
 
